@@ -177,8 +177,8 @@
         },
         "newAccountShareActionDelay": {
           "type": "number",
-          "description": "Minimum account age in seconds before new accounts can invite members or create share links.\n@default 86400",
-          "default": 86400
+          "description": "Minimum account age in seconds before new accounts can invite members or create share links.\n@default 0",
+          "default": 0
         },
         "passwordRequirements": {
           "type": "object",

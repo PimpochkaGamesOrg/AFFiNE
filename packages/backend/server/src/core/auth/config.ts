@@ -43,7 +43,7 @@ defineModuleConfig('auth', {
   },
   newAccountShareActionDelay: {
     desc: 'Minimum account age in seconds before new accounts can invite members or create share links.',
-    default: 24 * 60 * 60,
+    default: 0,
     shape: z.number().int().min(0),
   },
   passwordRequirements: {
