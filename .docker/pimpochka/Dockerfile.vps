@@ -46,10 +46,7 @@ RUN yarn workspaces focus @affine/server --production && \
     yarn workspace @affine/server prisma generate && \
     mv ./node_modules ./packages/backend/server/node_modules && \
     rm -rf ./packages/backend/server/node_modules/@affine/server-native && \
-    cp -r ./packages/backend/native ./packages/backend/server/node_modules/@affine/server-native && \
-    mkdir -p ./packages/backend/server/.yarn && \
-    cp ./.yarnrc.yml ./packages/backend/server/.yarnrc.yml && \
-    cp -r ./.yarn/releases ./packages/backend/server/.yarn/releases
+    cp -r ./packages/backend/native ./packages/backend/server/node_modules/@affine/server-native
 
 RUN test -d packages/frontend/apps/web/dist && \
   test -d packages/frontend/admin/dist && \
@@ -81,8 +78,7 @@ COPY --from=assets /app /app
 
 RUN apt-get update && \
   apt-get install -y --no-install-recommends openssl libjemalloc2 && \
-  rm -rf /var/lib/apt/lists/* && \
-  corepack enable && corepack prepare yarn@4.13.0 --activate
+  rm -rf /var/lib/apt/lists/*
 
 ENV LD_PRELOAD=libjemalloc.so.2
 ENV AFFINE_SELFHOST_MEMBER_LIMIT=100

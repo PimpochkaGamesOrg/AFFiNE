@@ -1,9 +1,13 @@
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { generateKeyPairSync } from 'node:crypto';
 import fs from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
+const APP_ROOT = path.resolve(fileURLToPath(import.meta.url), '..');
+const PRISMA_BIN = path.join(APP_ROOT, 'node_modules', 'prisma', 'build', 'index.js');
+const MAIN_BIN = path.join(APP_ROOT, 'dist', 'main.js');
 const SELF_HOST_CONFIG_DIR = `${homedir()}/.affine/config`;
 
 function generatePrivateKey() {
@@ -40,8 +44,8 @@ function prepare() {
 
 function runPrismaMigrations() {
   console.log('running prisma migrations.');
-  execSync('yarn prisma migrate deploy', {
-    encoding: 'utf-8',
+  execFileSync(process.execPath, [PRISMA_BIN, 'migrate', 'deploy'], {
+    cwd: APP_ROOT,
     env: process.env,
     stdio: 'inherit',
   });
@@ -53,19 +57,23 @@ function repairPgvectorEmbeddingTables() {
     path.join(import.meta.dirname, 'repair-pgvector-embedding-tables.sql'),
     'utf-8'
   );
-  execSync('yarn prisma db execute --stdin --schema schema.prisma', {
-    encoding: 'utf-8',
-    env: process.env,
-    input: sql,
-    stdio: ['pipe', 'inherit', 'inherit'],
-  });
+  execFileSync(
+    process.execPath,
+    [PRISMA_BIN, 'db', 'execute', '--stdin', '--schema', 'schema.prisma'],
+    {
+      cwd: APP_ROOT,
+      env: process.env,
+      input: sql,
+      stdio: ['pipe', 'inherit', 'inherit'],
+    }
+  );
 }
 
 function runDataMigrations() {
   console.log('running data migrations.');
-  execSync('yarn cli run', {
-    encoding: 'utf-8',
-    env: process.env,
+  execFileSync(process.execPath, [MAIN_BIN, 'run'], {
+    cwd: APP_ROOT,
+    env: { ...process.env, SERVER_FLAVOR: 'script' },
     stdio: 'inherit',
   });
 }
@@ -77,30 +85,34 @@ function fixFailedMigrations() {
   ];
   for (const migration of maybeFailedMigrations) {
     try {
-      execSync(`yarn prisma migrate resolve --rolled-back ${migration}`, {
-        encoding: 'utf-8',
-        env: process.env,
-        stdio: 'pipe',
-      });
+      execFileSync(
+        process.execPath,
+        [PRISMA_BIN, 'migrate', 'resolve', '--rolled-back', migration],
+        {
+          cwd: APP_ROOT,
+          env: process.env,
+          stdio: 'pipe',
+          encoding: 'utf-8',
+        }
+      );
       console.log(`migration [${migration}] has been rolled back.`);
     } catch (err) {
+      const message = err.stderr?.toString() ?? err.message ?? String(err);
       if (
-        err.message.includes(
+        message.includes(
           'cannot be rolled back because it is not in a failed state'
         ) ||
-        err.message.includes(
+        message.includes(
           'cannot be rolled back because it was never applied'
         ) ||
-        err.message.includes(
+        message.includes(
           'called markMigrationRolledBack on a database without migrations table'
         )
       ) {
-        // migration has been rolled back, skip it
         continue;
       }
-      // ignore other errors
       console.log(
-        `migration [${migration}] rolled back failed. ${err.message}`
+        `migration [${migration}] rolled back failed. ${message}`
       );
     }
   }
