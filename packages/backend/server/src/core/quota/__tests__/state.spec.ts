@@ -307,10 +307,10 @@ test('selfhosted builtin free has cloud pro quota rights', async t => {
     t.is(userState.plan, 'selfhost_free');
     t.is(userState.storageQuota, BigInt(100 * ONE_GB));
     t.is(userQuota.name, 'Pro');
-    t.is(userQuota.memberLimit, 10);
+    t.is(userQuota.memberLimit, 100);
     t.is(workspaceState.plan, 'selfhost_free');
     t.is(workspaceQuota.name, 'Pro');
-    t.is(workspaceQuota.memberLimit, 10);
+    t.is(workspaceQuota.memberLimit, 100);
   } finally {
     // @ts-expect-error restore mutable test env singleton
     globalThis.env.DEPLOYMENT_TYPE = previousDeploymentType;

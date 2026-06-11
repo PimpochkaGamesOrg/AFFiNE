@@ -112,6 +112,18 @@ const ProFeature = {
   },
 } as const;
 
+const SelfhostFreeFeature = {
+  type: FeatureType.Quota,
+  configs: {
+    name: 'Pro',
+    blobLimit: 100 * OneMB,
+    storageQuota: 100 * OneGB,
+    historyPeriod: 30 * OneDay,
+    memberLimit: 100,
+    copilotActionLimit: 10,
+  },
+} as const;
+
 const LifetimeProFeature = {
   type: FeatureType.Quota,
   configs: {
@@ -148,7 +160,7 @@ export const FeatureConfigs: {
   };
 } = {
   get free_plan_v1() {
-    return env.selfhosted ? ProFeature : FreeFeature;
+    return env.selfhosted ? SelfhostFreeFeature : FreeFeature;
   },
   pro_plan_v1: ProFeature,
   lifetime_pro_plan_v1: LifetimeProFeature,
