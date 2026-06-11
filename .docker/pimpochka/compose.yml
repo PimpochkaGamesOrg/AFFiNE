@@ -13,8 +13,6 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
-      affine_migration:
-        condition: service_completed_successfully
     volumes:
       - ${UPLOAD_LOCATION}:/root/.affine/storage
       - ${CONFIG_LOCATION}:/root/.affine/config
