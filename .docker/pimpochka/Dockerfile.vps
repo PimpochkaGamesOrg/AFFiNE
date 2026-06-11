@@ -1,0 +1,67 @@
+# syntax=docker/dockerfile:1.7
+# Full AFFiNE build inside Docker (for VPS). Host needs only Docker.
+
+FROM node:22-bookworm-slim AS builder
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssl ca-certificates curl git python3 build-essential pkg-config clang \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN corepack enable && corepack prepare yarn@4.13.0 --activate
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+COPY . .
+
+RUN rustup toolchain install 1.96.0 && rustup default 1.96.0
+
+ENV NODE_OPTIONS="--max-old-space-size=8192"
+ENV CARGO_BUILD_JOBS=1
+ENV CARGO_TARGET_DIR=/tmp/cargo-target
+ENV BUILD_TYPE=stable
+ENV HUSKY=0
+ENV CI=true
+ENV CC=clang
+
+RUN yarn install --immutable
+
+RUN yarn workspace @affine/server-native build
+RUN yarn affine @affine/web build
+RUN yarn affine @affine/admin build
+RUN yarn affine @affine/mobile build
+RUN yarn workspace @affine/server build
+
+FROM node:22-bookworm-slim AS assets
+WORKDIR /app
+
+COPY --from=builder /app/packages/backend/server /app
+COPY --from=builder /app/packages/frontend/apps/web/dist /app/static
+COPY --from=builder /app/packages/frontend/admin/dist /app/static/admin
+COPY --from=builder /app/packages/frontend/apps/mobile/dist /app/static/mobile
+
+ARG TARGETARCH
+ARG TARGETVARIANT
+
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends openssl ca-certificates && \
+  rm -rf /var/lib/apt/lists/*
+
+RUN AFFINE_DOCKER_CLEAN=1 TARGETARCH="${TARGETARCH}" TARGETVARIANT="${TARGETVARIANT}" node ./scripts/docker-clean.mjs
+
+FROM node:22-bookworm-slim
+WORKDIR /app
+
+COPY --from=assets /app /app
+
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends openssl libjemalloc2 && \
+  rm -rf /var/lib/apt/lists/*
+
+ENV LD_PRELOAD=libjemalloc.so.2
+ENV AFFINE_SELFHOST_MEMBER_LIMIT=100
+
+EXPOSE 3010
+
+CMD ["node", "./dist/main.js"]

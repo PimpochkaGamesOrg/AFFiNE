@@ -160,7 +160,16 @@ export const FeatureConfigs: {
   };
 } = {
   get free_plan_v1() {
-    return env.selfhosted ? SelfhostFreeFeature : FreeFeature;
+    if (!env.selfhosted) {
+      return FreeFeature;
+    }
+    return {
+      ...SelfhostFreeFeature,
+      configs: {
+        ...SelfhostFreeFeature.configs,
+        memberLimit: env.selfhostMemberLimit,
+      },
+    };
   },
   pro_plan_v1: ProFeature,
   lifetime_pro_plan_v1: LifetimeProFeature,

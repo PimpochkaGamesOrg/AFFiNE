@@ -114,7 +114,9 @@ export class QuotaStateService {
       ? ownerState.usedStorageQuota
       : workspaceStorageUsage;
     const storageQuota = BigInt(quota.storageQuota);
-    const seatLimit = quota.seatLimit ?? 0;
+    const seatLimit = env.selfhosted
+      ? env.selfhostMemberLimit
+      : (quota.seatLimit ?? 0);
     const overcapacityMemberCount = Math.max(memberCount - seatLimit, 0);
     const readonlyReasons = [
       overcapacityMemberCount > 0 ? 'member_overflow' : null,

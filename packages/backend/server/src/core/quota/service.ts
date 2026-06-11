@@ -219,7 +219,7 @@ export class QuotaService {
 
   private userMemberLimit(plan: string) {
     if (plan === 'selfhost_free') {
-      return 100;
+      return env.selfhostMemberLimit;
     }
     return plan === 'pro' || plan === 'lifetime_pro' ? 10 : 3;
   }

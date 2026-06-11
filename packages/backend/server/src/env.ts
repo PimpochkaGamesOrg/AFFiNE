@@ -80,6 +80,12 @@ globalThis.readEnv = function readEnv<T>(
   return value as T;
 };
 
+export function readSelfhostMemberLimit(): number {
+  const raw = readEnv('AFFINE_SELFHOST_MEMBER_LIMIT', '100');
+  const parsed = Number.parseInt(String(raw), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 100;
+}
+
 export class Env implements AppEnv {
   NODE_ENV = (process.env.NODE_ENV ?? NodeEnv.Production) as NodeEnv;
   NAMESPACE = readEnv(
@@ -99,6 +105,10 @@ export class Env implements AppEnv {
 
   get selfhosted() {
     return this.DEPLOYMENT_TYPE === DeploymentType.Selfhosted;
+  }
+
+  get selfhostMemberLimit(): number {
+    return this.selfhosted ? readSelfhostMemberLimit() : 0;
   }
 
   isFlavor(flavor: Flavor) {
