@@ -24,14 +24,27 @@ ENV BUILD_TYPE=stable
 ENV HUSKY=0
 ENV CI=true
 ENV CC=clang
+# .dockerignore drops .git; html-plugin needs a short hash without opening the repo
+ENV GITHUB_SHA=docker-vps-build
 
 RUN yarn install --immutable
 
-RUN yarn workspace @affine/server-native build
+RUN yarn workspace @affine/server-native build && \
+  NATIVE_DIR=packages/backend/native && \
+  test -f "$NATIVE_DIR/server-native.node" && \
+  cp "$NATIVE_DIR/server-native.node" "$NATIVE_DIR/server-native.x64.node" && \
+  cp "$NATIVE_DIR/server-native.node" "$NATIVE_DIR/server-native.arm64.node" && \
+  cp "$NATIVE_DIR/server-native.node" "$NATIVE_DIR/server-native.armv7.node"
+
 RUN yarn affine @affine/web build
 RUN yarn affine @affine/admin build
 RUN yarn affine @affine/mobile build
 RUN yarn workspace @affine/server build
+
+RUN test -d packages/frontend/apps/web/dist && \
+  test -d packages/frontend/admin/dist && \
+  test -d packages/frontend/apps/mobile/dist && \
+  test -d packages/backend/server/dist
 
 FROM node:22-bookworm-slim AS assets
 WORKDIR /app
