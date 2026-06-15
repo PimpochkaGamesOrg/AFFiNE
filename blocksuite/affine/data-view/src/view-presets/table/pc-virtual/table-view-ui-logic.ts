@@ -31,6 +31,13 @@ import {
   type TableViewSelectionWithType,
 } from '../selection.js';
 import type { TableSingleView } from '../table-view-manager.js';
+import {
+  getTableViewportStyle,
+  renderTableViewportResizeHandle,
+  TableViewportResizeController,
+  tableStickyColumnHeaderStyle,
+  tableViewportWrapperStyle,
+} from '../table-viewport.js';
 import { handleTableWheel } from '../utils.js';
 import { TableClipboardController } from './controller/clipboard.js';
 import { TableDragController } from './controller/drag.js';
@@ -59,6 +66,7 @@ export class VirtualTableViewUILogic extends DataViewUILogicBase<
   dragController = new TableDragController(this);
   hotkeysController = new TableHotkeysController(this);
   selectionController = new TableSelectionController(this);
+  viewportResizeController = new TableViewportResizeController(this.view);
 
   virtualScroll$ = signal<TableGrid>();
   yScrollContainer: HTMLElement | undefined;
@@ -306,19 +314,36 @@ export class TableViewUI extends DataViewUIBase<VirtualTableViewUILogic> {
       paddingLeft: `${vPadding}px`,
       paddingRight: `${vPadding}px`,
     });
+    const viewportHeight = this.logic.viewportResizeController.effectiveHeight$.value;
+    const viewportStyle = getTableViewportStyle(viewportHeight);
     return html`
       ${renderUniLit(this.logic.root.config.headerWidget, {
         dataViewLogic: this.logic,
       })}
       <div class="${styles.tableContainer}" style="${wrapperStyle}">
-        <div
-          ${ref(this.scrollContainer$)}
-          class="${styles.tableBlockTable}"
-          @wheel="${this.logic.onWheel}"
-        >
-          <div class="${styles.tableContainer2}" style="${containerStyle}">
-            ${this.renderTable()}
+        <div class="${tableViewportWrapperStyle}">
+          <div
+            ${ref(this.scrollContainer$)}
+            class="${styles.tableBlockTable}"
+            style="${viewportStyle}"
+            @wheel="${this.logic.onWheel}"
+          >
+            <div
+              class="${tableStickyColumnHeaderStyle}"
+              style="${containerStyle}"
+            >
+              <virtual-table-header
+                .tableViewLogic="${this.logic}"
+              ></virtual-table-header>
+            </div>
+            <div class="${styles.tableContainer2}" style="${containerStyle}">
+              ${this.renderTable()}
+            </div>
           </div>
+          ${renderTableViewportResizeHandle(
+            this.logic.viewportResizeController,
+            this.logic.view.readonly$.value
+          )}
         </div>
       </div>
     `;

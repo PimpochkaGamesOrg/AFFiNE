@@ -20,6 +20,11 @@ import type { VirtualTableViewUILogic } from '../../../table-view-ui-logic';
 import * as styles from './column-header-css';
 const leftBarStyle = css({
   width: LEFT_TOOL_BAR_WIDTH,
+  flexShrink: 0,
+  position: 'sticky',
+  left: 0,
+  zIndex: 4,
+  backgroundColor: 'var(--affine-background-primary-color)',
 });
 export class VirtualTableHeader extends SignalWatcher(
   WithDisposable(ShadowlessElement)

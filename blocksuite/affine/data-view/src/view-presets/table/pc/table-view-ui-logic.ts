@@ -22,7 +22,12 @@ import {
   DataViewUILogicBase,
 } from '../../../core/view/data-view-base.js';
 import type { TableViewSelectionWithType } from '../selection';
-import type { TableSingleView } from '../table-view-manager.js';
+import {
+  getTableViewportStyle,
+  renderTableViewportResizeHandle,
+  TableViewportResizeController,
+  tableViewportWrapperStyle,
+} from '../table-viewport.js';
 import { handleTableWheel } from '../utils.js';
 import { TableClipboardController } from './controller/clipboard.js';
 import { TableDragController } from './controller/drag.js';
@@ -50,6 +55,7 @@ export class TableViewUILogic extends DataViewUILogicBase<
   dragController = new TableDragController(this);
   hotkeysController = new TableHotkeysController(this);
   selectionController = new TableSelectionController(this);
+  viewportResizeController = new TableViewportResizeController(this.view);
 
   private get readonly() {
     return this.view.readonly$.value;
@@ -180,6 +186,8 @@ export class TableViewUI extends DataViewUIBase<TableViewUILogic> {
       paddingLeft: `${vPadding}px`,
       paddingRight: `${vPadding}px`,
     });
+    const viewportHeight = this.logic.viewportResizeController.effectiveHeight$.value;
+    const viewportStyle = getTableViewportStyle(viewportHeight);
     return html`
       ${this.logic.headerWidget
         ? renderUniLit(this.logic.headerWidget, {
@@ -187,22 +195,29 @@ export class TableViewUI extends DataViewUIBase<TableViewUILogic> {
           })
         : ''}
       <div class="${tableWrapperStyle}" style="${wrapperStyle}">
-        <div
-          ${ref(this.logic.scrollContainer$)}
-          class="${tableScrollContainerStyle}"
-          @wheel="${this.logic.onWheel}"
-        >
+        <div class="${tableViewportWrapperStyle}">
           <div
-            ${ref(this.logic.tableContainer$)}
-            class="affine-database-table-container"
-            style="${containerStyle}"
+            ${ref(this.logic.scrollContainer$)}
+            class="${tableScrollContainerStyle}"
+            style="${viewportStyle}"
+            @wheel="${this.logic.onWheel}"
           >
-            ${this.logic.view.groupTrait.allHidden$.value
-              ? html`<div class="${groupsHiddenMessageStyle}">
-                  All groups are hidden
-                </div>`
-              : this.renderTable()}
+            <div
+              ${ref(this.logic.tableContainer$)}
+              class="affine-database-table-container"
+              style="${containerStyle}"
+            >
+              ${this.logic.view.groupTrait.allHidden$.value
+                ? html`<div class="${groupsHiddenMessageStyle}">
+                    All groups are hidden
+                  </div>`
+                : this.renderTable()}
+            </div>
           </div>
+          ${renderTableViewportResizeHandle(
+            this.logic.viewportResizeController,
+            this.logic.view.readonly$.value
+          )}
         </div>
       </div>
     `;

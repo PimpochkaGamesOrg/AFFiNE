@@ -2,7 +2,6 @@ import { css } from '@emotion/css';
 
 import {
   LEFT_TOOL_BAR_WIDTH,
-  TABLE_VIEWPORT_MAX_HEIGHT,
 } from '../consts';
 
 export const tableViewStyle = css({
@@ -20,7 +19,6 @@ export const tableWrapperStyle = css({
 export const tableScrollContainerStyle = css({
   position: 'relative',
   width: '100%',
-  maxHeight: `${TABLE_VIEWPORT_MAX_HEIGHT}px`,
   paddingBottom: '4px',
   zIndex: 1,
   overflow: 'auto',
@@ -115,10 +113,12 @@ const leftToolBarStyle = css({
   display: 'flex',
   alignItems: 'center',
   position: 'sticky',
-  zIndex: 1,
+  zIndex: 4,
+  top: 0,
   left: 0,
   width: `${LEFT_TOOL_BAR_WIDTH}px`,
   flexShrink: 0,
+  backgroundColor: 'var(--affine-background-primary-color)',
 });
 export const tableStyle = {
   leftToolBarStyle,

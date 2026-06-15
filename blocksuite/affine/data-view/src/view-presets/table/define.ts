@@ -23,6 +23,7 @@ type DataType = {
     iconColumn?: string;
     imageColumn?: string;
   };
+  viewportHeight?: number;
 };
 export type TableViewData = BasicViewDataType<
   typeof tableViewType.type,

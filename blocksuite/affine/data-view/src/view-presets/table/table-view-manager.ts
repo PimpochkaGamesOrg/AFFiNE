@@ -23,7 +23,13 @@ import {
   SingleViewBase,
 } from '../../core/view-manager/single-view.js';
 import type { ViewManager } from '../../core/view-manager/view-manager.js';
-import { DEFAULT_COLUMN_MIN_WIDTH, DEFAULT_COLUMN_WIDTH } from './consts.js';
+import {
+  DEFAULT_COLUMN_MIN_WIDTH,
+  DEFAULT_COLUMN_WIDTH,
+  TABLE_VIEWPORT_DEFAULT_HEIGHT,
+  TABLE_VIEWPORT_MAX_HEIGHT,
+  TABLE_VIEWPORT_MIN_HEIGHT,
+} from './consts.js';
 import type { TableViewData } from './define.js';
 
 export const materializeColumnsByPropertyIds = (
@@ -253,6 +259,25 @@ export class TableSingleView extends SingleViewBase<TableViewData> {
   readonly$ = computed(() => {
     return this.manager.readonly$.value;
   });
+
+  viewportHeight$ = computed(() => {
+    const customHeight = this.data$.value?.viewportHeight;
+    if (customHeight != null) {
+      return Math.min(
+        TABLE_VIEWPORT_MAX_HEIGHT,
+        Math.max(TABLE_VIEWPORT_MIN_HEIGHT, customHeight)
+      );
+    }
+    return TABLE_VIEWPORT_DEFAULT_HEIGHT;
+  });
+
+  setViewportHeight(height: number): void {
+    const clamped = Math.min(
+      TABLE_VIEWPORT_MAX_HEIGHT,
+      Math.max(TABLE_VIEWPORT_MIN_HEIGHT, height)
+    );
+    this.dataUpdate(() => ({ viewportHeight: clamped }));
+  }
 
   get groupProperties() {
     return this.data$.value?.groupProperties ?? [];

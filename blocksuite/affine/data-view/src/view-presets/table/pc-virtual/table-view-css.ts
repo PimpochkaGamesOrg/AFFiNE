@@ -3,7 +3,6 @@ import { cssVarV2 } from '@toeverything/theme/v2';
 
 import {
   LEFT_TOOL_BAR_WIDTH,
-  TABLE_VIEWPORT_MAX_HEIGHT,
 } from '../consts.js';
 
 export const tableView = css({
@@ -19,7 +18,6 @@ export const tableContainer = css({
 export const tableBlockTable = css({
   position: 'relative',
   width: '100%',
-  maxHeight: `${TABLE_VIEWPORT_MAX_HEIGHT}px`,
   paddingBottom: '4px',
   zIndex: 1,
   overflow: 'auto',

@@ -30,6 +30,9 @@ export const cell = css({
 });
 
 export const headerAddColumnButton = css({
+  position: 'sticky',
+  right: 0,
+  zIndex: 3,
   height: `${DEFAULT_COLUMN_TITLE_HEIGHT}px`,
   backgroundColor: 'var(--affine-background-primary-color)',
   display: 'flex',

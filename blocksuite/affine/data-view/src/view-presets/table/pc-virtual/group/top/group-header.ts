@@ -124,12 +124,7 @@ export class TableGroupHeader extends SignalWatcher(
   };
 
   override render() {
-    return html`
-      ${this.renderGroupHeader()}
-      <virtual-table-header
-        .tableViewLogic="${this.tableViewLogic}"
-      ></virtual-table-header>
-    `;
+    return html` ${this.renderGroupHeader()} `;
   }
 }
 

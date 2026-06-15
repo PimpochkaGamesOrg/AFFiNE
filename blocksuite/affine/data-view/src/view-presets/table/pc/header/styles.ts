@@ -17,7 +17,9 @@ export const styles = css`
     }
 
     .affine-database-column-header {
-        position: relative;
+        position: sticky;
+        top: 0;
+        z-index: 3;
         display: flex;
         flex-direction: row;
         border-bottom: 1px solid ${unsafeCSS(cssVarV2.layer.insideBorder.border)};
@@ -168,7 +170,9 @@ export const styles = css`
 
     .affine-database-add-column-button {
         position: sticky;
+        top: 0;
         right: 0;
+        z-index: 3;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -178,6 +182,10 @@ export const styles = css`
     }
 
     .header-add-column-button {
+        position: sticky;
+        top: 0;
+        right: 0;
+        z-index: 3;
         height: ${DEFAULT_COLUMN_TITLE_HEIGHT}px;
         background-color: var(--affine-background-primary-color);
         display: flex;
