@@ -65,22 +65,19 @@ export class NotionApiClient {
   }
 
   parseDatabaseId(input: string): string {
-    const trimmed = input.trim();
-    const uuidMatch = trimmed.match(
-      /[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
-    );
-    if (!uuidMatch) {
+    const hex = input.replace(/[^0-9a-f]/gi, '');
+    if (hex.length !== 32) {
       throw new Error('Invalid Notion database ID or URL');
     }
-    return uuidMatch[0].replace(/-/g, '').length === 32
-      ? [
-          uuidMatch[0].slice(0, 8),
-          uuidMatch[0].slice(8, 12),
-          uuidMatch[0].slice(12, 16),
-          uuidMatch[0].slice(16, 20),
-          uuidMatch[0].slice(20),
-        ].join('-')
-      : uuidMatch[0];
+    return [
+      hex.slice(0, 8),
+      hex.slice(8, 12),
+      hex.slice(12, 16),
+      hex.slice(16, 20),
+      hex.slice(20, 32),
+    ]
+      .join('-')
+      .toLowerCase();
   }
 }
 
