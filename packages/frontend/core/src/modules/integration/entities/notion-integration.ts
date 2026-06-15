@@ -11,7 +11,9 @@ import { IntegrationPropertyService } from '../services/integration-property';
 import { blocksToMarkdown, getPageTitle } from '../notion/blocks-to-markdown';
 import { NotionApiClient } from '../notion/notion-api';
 import {
+  ensureAllColumnsFromSchema,
   ensureColumn,
+  findColumnIdForProperty,
   resolveMultiSelectOptionIds,
   resolveSelectOptionId,
 } from '../notion/property-columns';
@@ -132,16 +134,24 @@ export class NotionIntegration extends Entity<{ writer: IntegrationWriter }> {
         property,
         schema[propertyName]
       );
-      if (!columnId) continue;
+      const resolvedColumnId =
+        columnId ??
+        findColumnIdForProperty(
+          datasource,
+          propertyName,
+          schema[propertyName]
+        );
+      if (!resolvedColumnId) continue;
 
       const cellValue = getCellValueForProperty(
         property,
-        name => resolveSelectOptionId(datasource, columnId, name),
-        names => resolveMultiSelectOptionIds(datasource, columnId, names)
+        name => resolveSelectOptionId(datasource, resolvedColumnId, name),
+        names =>
+          resolveMultiSelectOptionIds(datasource, resolvedColumnId, names)
       );
       if (cellValue === undefined) continue;
 
-      datasource.cellValueChange(rowId, columnId, cellValue);
+      datasource.cellValueChange(rowId, resolvedColumnId, cellValue);
     }
   }
 
@@ -271,6 +281,8 @@ export class NotionIntegration extends Entity<{ writer: IntegrationWriter }> {
       const titleColumnId =
         dbModel.props.columns.find(column => column.type === 'title')?.id ??
         dbModel.props.views[0]?.header?.titleColumn;
+
+      ensureAllColumnsFromSchema(datasource, schema);
 
       const localRefs = await this.getRefs(databaseBlockId);
       const localRefsMap = new Map(

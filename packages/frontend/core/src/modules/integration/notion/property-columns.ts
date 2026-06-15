@@ -17,10 +17,20 @@ const NOTION_TO_AFFINE_TYPE: Record<string, string> = {
   email: 'link',
   phone_number: 'rich-text',
   status: 'select',
+  relation: 'rich-text',
+  people: 'rich-text',
+  files: 'rich-text',
+  formula: 'rich-text',
+  rollup: 'rich-text',
+  unique_id: 'rich-text',
+  created_time: 'date',
+  last_edited_time: 'date',
+  created_by: 'rich-text',
+  last_edited_by: 'rich-text',
 };
 
-export function getAffinePropertyType(notionType: string): string | undefined {
-  return NOTION_TO_AFFINE_TYPE[notionType];
+export function getAffinePropertyType(notionType: string): string {
+  return NOTION_TO_AFFINE_TYPE[notionType] ?? 'rich-text';
 }
 
 export function isSelectLikeProperty(type: string) {
@@ -28,9 +38,8 @@ export function isSelectLikeProperty(type: string) {
 }
 
 export function buildSelectOptionsFromSchema(
-  schema?: NotionDatabasePropertySchema
+  schema: NotionDatabasePropertySchema
 ): SelectOption[] {
-  if (!schema) return [];
   const notionOptions =
     schema.select?.options ??
     schema.multi_select?.options ??
@@ -83,33 +92,80 @@ export function findColumnIdByName(
   });
 }
 
+function applySelectOptions(
+  datasource: DatabaseBlockDataSource,
+  columnId: string,
+  schema: NotionDatabasePropertySchema,
+  property?: NotionPageProperty
+) {
+  if (!isSelectLikeProperty(schema.type)) return;
+
+  const data = datasource.propertyDataGet(columnId) as {
+    options?: SelectOption[];
+  };
+  const options = mergeSelectOptions(
+    mergeSelectOptions(data.options ?? [], buildSelectOptionsFromSchema(schema)),
+    property ? collectSelectOptionsFromValue(property) : []
+  );
+  if (options.length > 0) {
+    datasource.propertyDataSet(columnId, { options });
+  }
+}
+
+export function ensureColumnFromSchema(
+  datasource: DatabaseBlockDataSource,
+  propertyName: string,
+  schema: NotionDatabasePropertySchema
+): string | undefined {
+  if (schema.type === 'title') return undefined;
+
+  const displayName = schema.name?.trim() || propertyName;
+  const affineType = getAffinePropertyType(schema.type);
+
+  let columnId = findColumnIdByName(datasource, displayName);
+  if (!columnId) {
+    columnId = datasource.propertyAdd('end', {
+      type: affineType,
+      name: displayName,
+    });
+    if (!columnId) return undefined;
+  }
+
+  applySelectOptions(datasource, columnId, schema);
+  return columnId;
+}
+
+export function ensureAllColumnsFromSchema(
+  datasource: DatabaseBlockDataSource,
+  schema: Record<string, NotionDatabasePropertySchema>
+) {
+  for (const [propertyName, propertySchema] of Object.entries(schema)) {
+    ensureColumnFromSchema(datasource, propertyName, propertySchema);
+  }
+}
+
 export function ensureColumn(
   datasource: DatabaseBlockDataSource,
   propertyName: string,
   property: NotionPageProperty,
   schema?: NotionDatabasePropertySchema
 ): string | undefined {
-  const affineType = getAffinePropertyType(property.type);
-  if (!affineType) return undefined;
+  if (property.type === 'title') return undefined;
 
-  let columnId = findColumnIdByName(datasource, propertyName);
+  if (schema) {
+    return ensureColumnFromSchema(datasource, propertyName, schema);
+  }
+
+  const affineType = getAffinePropertyType(property.type);
+  const displayName = propertyName;
+
+  let columnId = findColumnIdByName(datasource, displayName);
   if (!columnId) {
     columnId = datasource.propertyAdd('end', {
       type: affineType,
-      name: propertyName,
+      name: displayName,
     });
     if (!columnId) return undefined;
-
-    if (isSelectLikeProperty(property.type)) {
-      const options = mergeSelectOptions(
-        buildSelectOptionsFromSchema(schema),
-        collectSelectOptionsFromValue(property)
-      );
-      if (options.length) {
-        datasource.propertyDataSet(columnId, { options });
-      }
-    }
-    return columnId;
   }
 
   if (isSelectLikeProperty(property.type)) {
@@ -160,4 +216,13 @@ export function resolveMultiSelectOptionIds(
   return optionNames
     .map(name => resolveSelectOptionId(datasource, columnId, name))
     .filter((id): id is string => !!id);
+}
+
+export function findColumnIdForProperty(
+  datasource: DatabaseBlockDataSource,
+  propertyName: string,
+  schema?: NotionDatabasePropertySchema
+) {
+  const displayName = schema?.name?.trim() || propertyName;
+  return findColumnIdByName(datasource, displayName);
 }
