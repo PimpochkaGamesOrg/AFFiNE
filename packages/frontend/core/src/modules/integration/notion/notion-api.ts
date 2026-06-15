@@ -1,6 +1,7 @@
 import type {
   NotionBlock,
   NotionBlocksResponse,
+  NotionDatabase,
   NotionPage,
   NotionQueryResponse,
 } from './types';
@@ -32,6 +33,10 @@ export class NotionApiClient {
 
   verifyToken() {
     return this.request<{ object: string }>('users/me');
+  }
+
+  getDatabase(databaseId: string) {
+    return this.request<NotionDatabase>(`databases/${databaseId}`);
   }
 
   queryDatabase(databaseId: string, startCursor?: string | null) {

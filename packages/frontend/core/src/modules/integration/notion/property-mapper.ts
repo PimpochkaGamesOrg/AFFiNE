@@ -2,8 +2,10 @@ import { Text } from '@blocksuite/affine/store';
 
 import type { NotionPageProperty } from './types';
 
-export function mapNotionPropertyToCellValue(
-  property: NotionPageProperty
+export function getCellValueForProperty(
+  property: NotionPageProperty,
+  resolveSelect: (name?: string | null) => string | undefined,
+  resolveMultiSelect: (names: string[]) => string[]
 ): unknown {
   switch (property.type) {
     case 'rich_text':
@@ -13,9 +15,13 @@ export function mapNotionPropertyToCellValue(
     case 'number':
       return property.number ?? undefined;
     case 'select':
-      return property.select?.id;
+      return resolveSelect(property.select?.name);
     case 'multi_select':
-      return property.multi_select?.map(item => item.id) ?? [];
+      return resolveMultiSelect(
+        property.multi_select?.map(item => item.name) ?? []
+      );
+    case 'status':
+      return resolveSelect(property.status?.name);
     case 'date': {
       if (!property.date?.start) return undefined;
       const start = new Date(property.date.start).getTime();
@@ -28,32 +34,35 @@ export function mapNotionPropertyToCellValue(
     case 'email':
       return property.email ?? undefined;
     case 'phone_number':
-      return property.phone_number ?? undefined;
-    case 'status':
-      return property.status?.id;
+      return new Text(property.phone_number ?? '');
+    case 'unique_id': {
+      const prefix = property.unique_id?.prefix ?? '';
+      const number = property.unique_id?.number ?? '';
+      return new Text(`${prefix}${number}`);
+    }
+    case 'created_time':
+    case 'last_edited_time': {
+      const raw =
+        property.type === 'created_time'
+          ? property.created_time
+          : property.last_edited_time;
+      if (!raw) return undefined;
+      const start = new Date(raw).getTime();
+      return Number.isNaN(start) ? undefined : { start, end: null };
+    }
+    case 'formula': {
+      if (property.formula?.string != null) {
+        return new Text(property.formula.string);
+      }
+      if (property.formula?.number != null) {
+        return property.formula.number;
+      }
+      if (property.formula?.boolean != null) {
+        return property.formula.boolean;
+      }
+      return undefined;
+    }
     default:
       return undefined;
   }
-}
-
-export function ensureSelectOptions(
-  property: NotionPageProperty,
-  existingOptions: { id: string; value: string; color: string }[] = []
-): { id: string; value: string; color: string }[] {
-  const options = [...existingOptions];
-  const addOption = (id: string, value: string) => {
-    if (!options.some(option => option.id === id)) {
-      options.push({ id, value, color: 'var(--affine-tag-blue)' });
-    }
-  };
-
-  if (property.select) {
-    addOption(property.select.id, property.select.name);
-  }
-  property.multi_select?.forEach(item => addOption(item.id, item.name));
-  if (property.status) {
-    addOption(property.status.id, property.status.name);
-  }
-
-  return options;
 }

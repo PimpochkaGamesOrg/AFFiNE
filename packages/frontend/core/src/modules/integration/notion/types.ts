@@ -34,6 +34,28 @@ export type NotionPageProperty = {
   email?: string | null;
   phone_number?: string | null;
   status?: { id: string; name: string; color: string } | null;
+  relation?: { id: string }[];
+  people?: { id: string; name?: string; person?: { email?: string } }[];
+  files?: { name: string; external?: { url: string } }[];
+  formula?: { type: string; string?: string; number?: number; boolean?: boolean };
+  rollup?: { type: string; array?: unknown[]; number?: number; date?: { start: string } };
+  unique_id?: { prefix?: string | null; number?: number | null };
+  created_time?: string;
+  last_edited_time?: string;
+};
+
+export type NotionDatabasePropertySchema = {
+  id: string;
+  type: string;
+  name?: string;
+  select?: { options: { id: string; name: string; color: string }[] };
+  multi_select?: { options: { id: string; name: string; color: string }[] };
+  status?: { options: { id: string; name: string; color: string }[] };
+};
+
+export type NotionDatabase = {
+  id: string;
+  properties: Record<string, NotionDatabasePropertySchema>;
 };
 
 export type NotionQueryResponse = {

@@ -10,8 +10,13 @@ import { WorkspaceServerService } from '../../cloud';
 import { IntegrationPropertyService } from '../services/integration-property';
 import { blocksToMarkdown, getPageTitle } from '../notion/blocks-to-markdown';
 import { NotionApiClient } from '../notion/notion-api';
-import { mapNotionPropertyToCellValue } from '../notion/property-mapper';
-import type { NotionPage } from '../notion/types';
+import {
+  ensureColumn,
+  resolveMultiSelectOptionIds,
+  resolveSelectOptionId,
+} from '../notion/property-columns';
+import { getCellValueForProperty } from '../notion/property-mapper';
+import type { NotionDatabasePropertySchema, NotionPage } from '../notion/types';
 import type { NotionRefMeta } from '../type';
 import type { IntegrationRefStore } from '../store/integration-ref';
 import type { NotionStore } from '../store/notion';
@@ -112,15 +117,32 @@ export class NotionIntegration extends Entity<{ writer: IntegrationWriter }> {
     ] satisfies DeltaInsert<AffineTextAttributes>[]);
   }
 
-  private findColumnId(
+  private applyPageProperties(
+    page: NotionPage,
     datasource: DatabaseBlockDataSource,
-    propertyName: string
+    rowId: string,
+    schema: Record<string, NotionDatabasePropertySchema>
   ) {
-    const normalized = propertyName.trim().toLowerCase();
-    return datasource.properties$.value.find(columnId => {
-      const name = datasource.propertyNameGet(columnId);
-      return name?.trim().toLowerCase() === normalized;
-    });
+    for (const [propertyName, property] of Object.entries(page.properties)) {
+      if (property.type === 'title') continue;
+
+      const columnId = ensureColumn(
+        datasource,
+        propertyName,
+        property,
+        schema[propertyName]
+      );
+      if (!columnId) continue;
+
+      const cellValue = getCellValueForProperty(
+        property,
+        name => resolveSelectOptionId(datasource, columnId, name),
+        names => resolveMultiSelectOptionIds(datasource, columnId, names)
+      );
+      if (cellValue === undefined) continue;
+
+      datasource.cellValueChange(rowId, columnId, cellValue);
+    }
   }
 
   private async syncPage(
@@ -132,6 +154,7 @@ export class NotionIntegration extends Entity<{ writer: IntegrationWriter }> {
       integrationId: string;
       localRef?: { id: string; refMeta: NotionRefMeta };
       updateStrategy: NotionConfig['updateStrategy'];
+      schema: Record<string, NotionDatabasePropertySchema>;
     }
   ) {
     const {
@@ -141,6 +164,7 @@ export class NotionIntegration extends Entity<{ writer: IntegrationWriter }> {
       integrationId,
       localRef,
       updateStrategy = 'override',
+      schema,
     } = options;
 
     const title = getPageTitle(page);
@@ -174,16 +198,7 @@ export class NotionIntegration extends Entity<{ writer: IntegrationWriter }> {
       );
     }
 
-    for (const [propertyName, property] of Object.entries(page.properties)) {
-      if (property.type === 'title') continue;
-      const cellValue = mapNotionPropertyToCellValue(property);
-      if (cellValue === undefined) continue;
-
-      const propertyId = this.findColumnId(datasource, propertyName);
-      if (propertyId) {
-        datasource.cellValueChange(rowId, propertyId, cellValue);
-      }
-    }
+    this.applyPageProperties(page, datasource, rowId, schema);
 
     const { doc, release } = this.docsService.open(docId);
     doc.scope.get(IntegrationPropertyService).updateIntegrationProperties(
@@ -234,6 +249,8 @@ export class NotionIntegration extends Entity<{ writer: IntegrationWriter }> {
 
     try {
       const client = new NotionApiClient(this.getApiBaseUrl(), token);
+      const notionDatabase = await client.getDatabase(notionDatabaseId);
+      const schema = notionDatabase.properties;
       const integrationId = await encryptPBKDF2(
         `${token}:${databaseBlockId}`
       );
@@ -303,6 +320,7 @@ export class NotionIntegration extends Entity<{ writer: IntegrationWriter }> {
                 integrationId,
                 localRef,
                 updateStrategy,
+                schema,
               });
               finished++;
             })
