@@ -71,4 +71,8 @@ export type WORKSPACE_DIALOG_SCHEMA = {
     entryId?: string;
     isWorkspaceFile?: boolean;
   };
+  'notion-sync': (props: {
+    databaseBlockId: string;
+    pageDocId: string;
+  }) => void;
 };

@@ -7,6 +7,7 @@ import { GlobalState } from '../storage';
 import { TagService } from '../tag';
 import { WorkspaceScope, WorkspaceService } from '../workspace';
 import { CalendarIntegration } from './entities/calendar';
+import { NotionIntegration } from './entities/notion-integration';
 import { ReadwiseIntegration } from './entities/readwise';
 import { ReadwiseCrawler } from './entities/readwise-crawler';
 import { IntegrationWriter } from './entities/writer';
@@ -14,6 +15,7 @@ import { IntegrationService } from './services/integration';
 import { IntegrationPropertyService } from './services/integration-property';
 import { CalendarStore } from './store/calendar';
 import { IntegrationRefStore } from './store/integration-ref';
+import { NotionStore } from './store/notion';
 import { ReadwiseStore } from './store/readwise';
 
 export { IntegrationService };
@@ -31,6 +33,11 @@ export function configureIntegrationModule(framework: Framework) {
       WorkspaceService,
       WorkspaceServerService,
     ])
+    .store(NotionStore, [
+      GlobalState,
+      WorkspaceService,
+      WorkspaceServerService,
+    ])
     .service(IntegrationService)
     .entity(ReadwiseCrawler, [ReadwiseStore])
     .entity(IntegrationWriter, [WorkspaceService, TagService])
@@ -38,6 +45,12 @@ export function configureIntegrationModule(framework: Framework) {
       IntegrationRefStore,
       ReadwiseStore,
       DocsService,
+    ])
+    .entity(NotionIntegration, [
+      IntegrationRefStore,
+      NotionStore,
+      DocsService,
+      WorkspaceServerService,
     ])
     .store(CalendarStore, [WorkspaceService, WorkspaceServerService])
     .entity(CalendarIntegration, [CalendarStore])

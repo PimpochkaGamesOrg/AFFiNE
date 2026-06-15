@@ -5,6 +5,7 @@ import {
 } from '@affine/core/components/hooks/affine/use-share-url';
 import { ServerService } from '@affine/core/modules/cloud';
 import { EditorService } from '@affine/core/modules/editor';
+import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
 import { copyLinkToBlockStdScopeClipboard } from '@affine/core/utils/clipboard';
 import { I18n } from '@affine/i18n';
 import { track } from '@affine/track';
@@ -13,7 +14,7 @@ import {
   type MenuOptions,
 } from '@blocksuite/affine/components/context-menu';
 import type { DatabaseBlockModel } from '@blocksuite/affine/model';
-import { LinkIcon } from '@blocksuite/icons/lit';
+import { LinkIcon, NotionIcon } from '@blocksuite/icons/lit';
 import type { FrameworkProvider } from '@toeverything/infra';
 
 export function createDatabaseOptionsConfig(framework: FrameworkProvider) {
@@ -21,11 +22,33 @@ export function createDatabaseOptionsConfig(framework: FrameworkProvider) {
     configure: (model: DatabaseBlockModel, options: MenuOptions) => {
       const items = options.items;
 
-      items.splice(2, 0, createCopyLinkToBlockMenuItem(framework, model));
+      items.splice(
+        2,
+        0,
+        createCopyLinkToBlockMenuItem(framework, model),
+        createNotionSyncMenuItem(framework, model)
+      );
 
       return options;
     },
   };
+}
+
+function createNotionSyncMenuItem(
+  framework: FrameworkProvider,
+  model: DatabaseBlockModel
+) {
+  return menu.action({
+    name: I18n['com.affine.integration.notion.sync.menu'](),
+    prefix: NotionIcon({ width: '20', height: '20' }),
+    select: () => {
+      const workspaceDialogService = framework.get(WorkspaceDialogService);
+      workspaceDialogService.open('notion-sync', {
+        databaseBlockId: model.id,
+        pageDocId: model.store.id,
+      });
+    },
+  });
 }
 
 function createCopyLinkToBlockMenuItem(

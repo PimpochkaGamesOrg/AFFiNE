@@ -3,6 +3,7 @@ import {
   DateTimeIcon,
   HistoryIcon,
   LinkIcon,
+  NotionIcon,
   ReadwiseLogoDuotoneIcon,
   TextIcon,
 } from '@blocksuite/icons/rc';
@@ -13,13 +14,36 @@ import type { IntegrationProperty, IntegrationType } from './type';
 // name
 export const INTEGRATION_TYPE_NAME_MAP: Record<IntegrationType, I18nString> = {
   readwise: 'com.affine.integration.name.readwise',
-  // zotero: 'Zotero',
+  notion: 'com.affine.integration.name.notion',
 };
 
 // schema
 export const INTEGRATION_PROPERTY_SCHEMA: {
   [T in IntegrationType]: Record<string, IntegrationProperty<T>>;
 } = {
+  notion: {
+    notionPageId: {
+      order: '100',
+      label: 'com.affine.integration.notion-prop.page-id',
+      key: 'notionPageId',
+      type: 'text',
+      icon: TextIcon,
+    },
+    notionUrl: {
+      order: '200',
+      label: 'com.affine.integration.notion-prop.url',
+      key: 'notionUrl',
+      type: 'source',
+      icon: LinkIcon,
+    },
+    lastEditedAt: {
+      order: '300',
+      label: 'com.affine.integration.notion-prop.updated',
+      key: 'lastEditedAt',
+      type: 'date',
+      icon: HistoryIcon,
+    },
+  },
   readwise: {
     author: {
       order: '400',
@@ -59,5 +83,5 @@ export const INTEGRATION_ICON_MAP: Record<
   React.ComponentType<SVGProps<SVGSVGElement>>
 > = {
   readwise: ReadwiseLogoDuotoneIcon,
-  // zotero: () => null,
+  notion: NotionIcon,
 };

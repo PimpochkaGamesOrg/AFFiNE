@@ -10,7 +10,7 @@ import { nanoid } from 'nanoid';
 
 import type { WorkspacePropertyType } from '../../workspace-property';
 
-const integrationType = f.enum('readwise');
+const integrationType = f.enum('readwise', 'notion');
 
 export const AFFiNE_WORKSPACE_DB_SCHEMA = {
   folders: {

@@ -8,6 +8,7 @@ export type IntegrationType = NonNullable<DocIntegrationRef['type']>;
 
 export type IntegrationDocPropertiesMap = {
   readwise: ReadwiseDocProperties;
+  notion: NotionDocProperties;
 };
 
 export type IntegrationProperty<T extends IntegrationType> = {
@@ -92,6 +93,30 @@ export interface ReadwiseConfig {
    */
   tags?: string[];
 }
+// ===============================
+// Notion
+// ===============================
+export interface NotionDocProperties {
+  notionPageId: string;
+  notionUrl: string;
+  lastEditedAt: string;
+}
+
+export interface NotionRefMeta {
+  notionPageId: string;
+  updatedAt: string;
+  rowId?: string;
+}
+
+export interface NotionConfig {
+  token?: string;
+  notionDatabaseId?: string;
+  lastSyncCursor?: string | null;
+  lastSyncAt?: string;
+  syncedCount?: number;
+  updateStrategy?: 'override' | 'append';
+}
+
 // ===============================
 // Zotero
 // ===============================

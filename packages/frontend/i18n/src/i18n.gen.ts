@@ -8473,6 +8473,37 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.failed-to-send-request.title"](): string;
     /**
+      * `Notion`
+      */
+    ["com.affine.integration.name.notion"](): string;
+    ["com.affine.integration.notion-prop.page-id"](): string;
+    ["com.affine.integration.notion-prop.url"](): string;
+    ["com.affine.integration.notion-prop.updated"](): string;
+    ["com.affine.integration.notion.sync.menu"](): string;
+    ["com.affine.integration.notion.sync.title"](): string;
+    ["com.affine.integration.notion.sync.desc"](): string;
+    ["com.affine.integration.notion.sync.token-placeholder"](): string;
+    ["com.affine.integration.notion.sync.database-placeholder"](): string;
+    ["com.affine.integration.notion.sync.save"](): string;
+    ["com.affine.integration.notion.sync.start"](): string;
+    ["com.affine.integration.notion.sync.resume"](): string;
+    ["com.affine.integration.notion.sync.pause"](): string;
+    ["com.affine.integration.notion.sync.progress"](options: {
+      count: number;
+    }): string;
+    ["com.affine.integration.notion.sync.connected"](): string;
+    ["com.affine.integration.notion.sync.invalid-token"](): string;
+    ["com.affine.integration.notion.sync.missing-fields"](): string;
+    ["com.affine.integration.notion.sync.complete"](): string;
+    ["com.affine.integration.notion.sync.complete-desc"](options: {
+      count: number;
+    }): string;
+    ["com.affine.integration.notion.sync.paused"](): string;
+    ["com.affine.integration.notion.sync.paused-desc"](options: {
+      finished: number;
+    }): string;
+    ["com.affine.integration.notion.sync.failed"](): string;
+    /**
       * `Readwise`
       */
     ["com.affine.integration.name.readwise"](): string;

@@ -31,6 +31,7 @@ services:
     volumes:
       - ${UPLOAD_LOCATION}:/root/.affine/storage
       - ${CONFIG_LOCATION}:/root/.affine/config
+      - ./scripts/self-host-predeploy.js:/app/scripts/self-host-predeploy.js:ro
     command: ['sh', '-c', 'node ./scripts/self-host-predeploy.js']
     env_file:
       - .env
