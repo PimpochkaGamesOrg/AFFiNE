@@ -1,7 +1,7 @@
 import { DatabaseBlockDataSource } from '@blocksuite/affine/blocks/database';
 import type { DatabaseBlockModel } from '@blocksuite/affine/model';
-import { REFERENCE_NODE } from '@blocksuite/affine-shared/consts';
-import { Text } from '@blocksuite/affine/store';
+import type { AffineTextAttributes } from '@blocksuite/affine-shared/types';
+import { Text, type DeltaInsert } from '@blocksuite/affine/store';
 import { Entity, LiveData } from '@toeverything/infra';
 import { chunk } from 'lodash-es';
 
@@ -19,7 +19,7 @@ import type { NotionConfig } from '../type';
 import { encryptPBKDF2 } from '../utils/encrypt';
 import type { IntegrationWriter } from './writer';
 
-const BATCH_SIZE = 3;
+const BATCH_SIZE = 1;
 
 export class NotionIntegration extends Entity<{ writer: IntegrationWriter }> {
   writer = this.props.writer;
@@ -103,12 +103,13 @@ export class NotionIntegration extends Entity<{ writer: IntegrationWriter }> {
     return docRef;
   }
 
-  private createLinkedTitleText(docId: string, title: string) {
-    const text = new Text();
-    text.insert(title || REFERENCE_NODE, 0, {
-      reference: { type: 'LinkedPage', pageId: docId },
-    });
-    return text;
+  private createLinkedTitleText(docId: string) {
+    return new Text<AffineTextAttributes>([
+      {
+        insert: ' ',
+        attributes: { reference: { type: 'LinkedPage', pageId: docId } },
+      },
+    ] satisfies DeltaInsert<AffineTextAttributes>[]);
   }
 
   private findColumnId(
@@ -162,14 +163,14 @@ export class NotionIntegration extends Entity<{ writer: IntegrationWriter }> {
         datasource.cellValueChange(
           rowId,
           titleColumnId,
-          this.createLinkedTitleText(docId, title)
+          this.createLinkedTitleText(docId)
         );
       }
     } else if (titleColumnId) {
       datasource.cellValueChange(
         rowId,
         titleColumnId,
-        this.createLinkedTitleText(docId, title)
+        this.createLinkedTitleText(docId)
       );
     }
 
