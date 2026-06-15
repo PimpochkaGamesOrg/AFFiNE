@@ -23,6 +23,7 @@ import {
 } from '../../../core/view/data-view-base.js';
 import type { TableViewSelectionWithType } from '../selection';
 import type { TableSingleView } from '../table-view-manager.js';
+import { handleTableWheel } from '../utils.js';
 import { TableClipboardController } from './controller/clipboard.js';
 import { TableDragController } from './controller/drag.js';
 import { TableHotkeysController } from './controller/hotkeys.js';
@@ -90,18 +91,7 @@ export class TableViewUILogic extends DataViewUILogicBase<
     }
   };
 
-  onWheel = (event: WheelEvent) => {
-    if (event.metaKey || event.ctrlKey) {
-      return;
-    }
-    const ele = event.currentTarget;
-    if (ele instanceof HTMLElement) {
-      if (ele.scrollWidth === ele.clientWidth) {
-        return;
-      }
-      event.stopPropagation();
-    }
-  };
+  onWheel = handleTableWheel;
 
   renderAddGroup = (groupHelper: GroupTrait) => {
     const addGroup = groupHelper.addGroup;

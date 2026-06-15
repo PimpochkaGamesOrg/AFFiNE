@@ -1,7 +1,10 @@
 import { css } from '@emotion/css';
 import { cssVarV2 } from '@toeverything/theme/v2';
 
-import { LEFT_TOOL_BAR_WIDTH } from '../consts.js';
+import {
+  LEFT_TOOL_BAR_WIDTH,
+  TABLE_VIEWPORT_MAX_HEIGHT,
+} from '../consts.js';
 
 export const tableView = css({
   position: 'relative',
@@ -10,16 +13,16 @@ export const tableView = css({
 });
 
 export const tableContainer = css({
-  overflowY: 'auto',
+  overflow: 'visible',
 });
 
 export const tableBlockTable = css({
   position: 'relative',
   width: '100%',
+  maxHeight: `${TABLE_VIEWPORT_MAX_HEIGHT}px`,
   paddingBottom: '4px',
   zIndex: 1,
-  overflowX: 'scroll',
-  overflowY: 'hidden',
+  overflow: 'auto',
   '&::-webkit-scrollbar': {
     height: '8px',
   },

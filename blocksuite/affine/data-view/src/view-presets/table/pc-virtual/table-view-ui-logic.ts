@@ -5,9 +5,10 @@ import {
 } from '@blocksuite/affine-components/context-menu';
 import type { InsertToPosition } from '@blocksuite/affine-shared/utils';
 import { AddCursorIcon } from '@blocksuite/icons/lit';
-import { computed, signal } from '@preact/signals-core';
+import { computed, effect, signal } from '@preact/signals-core';
 import { cssVarV2 } from '@toeverything/theme/v2';
 import type { TemplateResult } from 'lit';
+import { ref } from 'lit/directives/ref.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { html } from 'lit/static-html.js';
 
@@ -30,6 +31,7 @@ import {
   type TableViewSelectionWithType,
 } from '../selection.js';
 import type { TableSingleView } from '../table-view-manager.js';
+import { handleTableWheel } from '../utils.js';
 import { TableClipboardController } from './controller/clipboard.js';
 import { TableDragController } from './controller/drag.js';
 import { TableHotkeysController } from './controller/hotkeys.js';
@@ -46,10 +48,7 @@ import type {
   TableGroupData,
   TableRowData,
 } from './types.js';
-import {
-  getScrollContainer,
-  GridVirtualScroll,
-} from './virtual/virtual-scroll.js';
+import { GridVirtualScroll } from './virtual/virtual-scroll.js';
 
 export class VirtualTableViewUILogic extends DataViewUILogicBase<
   TableSingleView,
@@ -136,18 +135,7 @@ export class VirtualTableViewUILogic extends DataViewUILogicBase<
     }
   };
 
-  onWheel = (event: WheelEvent) => {
-    if (event.metaKey || event.ctrlKey) {
-      return;
-    }
-    const ele = event.currentTarget;
-    if (ele instanceof HTMLElement) {
-      if (ele.scrollWidth === ele.clientWidth) {
-        return;
-      }
-      event.stopPropagation();
-    }
-  };
+  onWheel = handleTableWheel;
 
   renderAddGroup = (groupHelper: GroupTrait) => {
     const addGroup = groupHelper.addGroup;
@@ -185,7 +173,10 @@ export class VirtualTableViewUILogic extends DataViewUILogicBase<
     </div>`;
   };
 
-  initVirtualScroll(yScrollContainer: HTMLElement, ui: TableViewUI) {
+  initVirtualScroll(scrollContainer: HTMLElement, ui: TableViewUI) {
+    if (this.virtualScroll$.value) {
+      return;
+    }
     const virtualScroll = new GridVirtualScroll<
       TableGroupData,
       TableRowData,
@@ -262,10 +253,11 @@ export class VirtualTableViewUILogic extends DataViewUILogicBase<
         },
       },
       fixedRowHeight$: signal(undefined),
-      yScrollContainer,
+      xScrollContainer: scrollContainer,
+      yScrollContainer: scrollContainer,
     });
 
-    this.yScrollContainer = yScrollContainer;
+    this.yScrollContainer = scrollContainer;
 
     this.virtualScroll$.value = virtualScroll;
     requestAnimationFrame(() => {
@@ -280,6 +272,8 @@ export class VirtualTableViewUILogic extends DataViewUILogicBase<
 }
 
 export class TableViewUI extends DataViewUIBase<VirtualTableViewUILogic> {
+  scrollContainer$ = signal<HTMLDivElement>();
+
   private renderTable() {
     return this.logic.virtualScroll$.value?.content;
   }
@@ -291,8 +285,14 @@ export class TableViewUI extends DataViewUIBase<VirtualTableViewUILogic> {
     this.logic.dragController.hostConnected();
     this.logic.hotkeysController.hostConnected();
     this.logic.selectionController.hostConnected();
-    const scrollContainer = getScrollContainer(this, 'y') ?? document.body;
-    this.logic.initVirtualScroll(scrollContainer, this);
+    this.disposables.add(
+      effect(() => {
+        const scrollContainer = this.scrollContainer$.value;
+        if (scrollContainer) {
+          this.logic.initVirtualScroll(scrollContainer, this);
+        }
+      })
+    );
     this.classList.add(styles.tableView);
   }
 
@@ -311,7 +311,11 @@ export class TableViewUI extends DataViewUIBase<VirtualTableViewUILogic> {
         dataViewLogic: this.logic,
       })}
       <div class="${styles.tableContainer}" style="${wrapperStyle}">
-        <div class="${styles.tableBlockTable}" @wheel="${this.logic.onWheel}">
+        <div
+          ${ref(this.scrollContainer$)}
+          class="${styles.tableBlockTable}"
+          @wheel="${this.logic.onWheel}"
+        >
           <div class="${styles.tableContainer2}" style="${containerStyle}">
             ${this.renderTable()}
           </div>

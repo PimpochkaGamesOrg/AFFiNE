@@ -1,6 +1,9 @@
 import { css } from '@emotion/css';
 
-import { LEFT_TOOL_BAR_WIDTH } from '../consts';
+import {
+  LEFT_TOOL_BAR_WIDTH,
+  TABLE_VIEWPORT_MAX_HEIGHT,
+} from '../consts';
 
 export const tableViewStyle = css({
   position: 'relative',
@@ -12,15 +15,15 @@ export const tableViewStyle = css({
   },
 });
 export const tableWrapperStyle = css({
-  overflowY: 'auto',
+  overflow: 'visible',
 });
 export const tableScrollContainerStyle = css({
   position: 'relative',
   width: '100%',
+  maxHeight: `${TABLE_VIEWPORT_MAX_HEIGHT}px`,
   paddingBottom: '4px',
   zIndex: 1,
-  overflowX: 'scroll',
-  overflowY: 'hidden',
+  overflow: 'auto',
 
   '&:hover': {
     paddingBottom: '0px',

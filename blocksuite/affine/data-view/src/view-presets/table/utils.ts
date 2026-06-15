@@ -75,3 +75,40 @@ export function handleCharStartEdit<T extends TableCell>(
   }
   return false;
 }
+
+export const handleTableWheel = (event: WheelEvent) => {
+  if (event.metaKey || event.ctrlKey) {
+    return;
+  }
+  const ele = event.currentTarget;
+  if (!(ele instanceof HTMLElement)) {
+    return;
+  }
+  const canScrollX = ele.scrollWidth > ele.clientWidth;
+  const canScrollY = ele.scrollHeight > ele.clientHeight;
+  if (!canScrollX && !canScrollY) {
+    return;
+  }
+  const horizontalDelta = event.shiftKey ? event.deltaY : event.deltaX;
+  const verticalDelta = event.shiftKey ? 0 : event.deltaY;
+  if (canScrollX && horizontalDelta !== 0) {
+    const atLeft = ele.scrollLeft <= 0;
+    const atRight =
+      ele.scrollLeft + ele.clientWidth >= ele.scrollWidth - 1;
+    if (
+      (horizontalDelta < 0 && !atLeft) ||
+      (horizontalDelta > 0 && !atRight)
+    ) {
+      event.stopPropagation();
+      return;
+    }
+  }
+  if (canScrollY && verticalDelta !== 0) {
+    const atTop = ele.scrollTop <= 0;
+    const atBottom =
+      ele.scrollTop + ele.clientHeight >= ele.scrollHeight - 1;
+    if ((verticalDelta < 0 && !atTop) || (verticalDelta > 0 && !atBottom)) {
+      event.stopPropagation();
+    }
+  }
+};
