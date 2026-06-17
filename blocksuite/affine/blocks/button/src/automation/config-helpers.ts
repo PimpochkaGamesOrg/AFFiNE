@@ -61,6 +61,8 @@ export function createEmptyEditAction(): ButtonEditAction {
   };
 }
 
-export function cloneConfig(config: ButtonAutomationConfig): ButtonAutomationConfig {
-  return structuredClone(config);
+export function cloneConfig(
+  config: ButtonAutomationConfig
+): ButtonAutomationConfig {
+  return JSON.parse(JSON.stringify(config)) as ButtonAutomationConfig;
 }

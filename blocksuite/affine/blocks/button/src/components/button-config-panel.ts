@@ -13,8 +13,9 @@ import type {
 } from '@blocksuite/affine-model';
 import { DeleteIcon, PlusIcon } from '@blocksuite/icons/lit';
 import { ShadowlessElement } from '@blocksuite/std';
+import type { Workspace } from '@blocksuite/store';
 import { cssVarV2 } from '@toeverything/theme/v2';
-import { html, nothing } from 'lit';
+import { html, nothing, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 
@@ -140,7 +141,13 @@ function propertiesFromRows(rows: PropertyRow[]) {
 
 export class ButtonConfigPanel extends ShadowlessElement {
   @property({ attribute: false })
-  accessor model!: ButtonBlockModel;
+  accessor model: ButtonBlockModel | undefined;
+
+  @property({ attribute: false })
+  accessor workspace: Workspace | undefined;
+
+  @property({ attribute: false })
+  accessor initialConfig: ButtonAutomationConfig | undefined;
 
   @property({ attribute: false })
   accessor onSave!: (config: ButtonAutomationConfig) => void;
@@ -155,15 +162,28 @@ export class ButtonConfigPanel extends ShadowlessElement {
   private accessor _editRows = new Map<number, PropertyRow[]>();
 
   private get draft(): ButtonAutomationConfig {
-    return this._draft ?? cloneConfig(this.model.props.automation);
+    return this._draft!;
   }
 
   private set draft(value: ButtonAutomationConfig) {
     this._draft = value;
   }
 
+  protected override willUpdate(_changed: PropertyValues<this>) {
+    if (this._draft) return;
+    if (this.initialConfig) {
+      this._draft = cloneConfig(this.initialConfig);
+      return;
+    }
+    if (this.model) {
+      this._draft = cloneConfig(this.model.props.automation);
+    }
+  }
+
   private get databases(): WorkspaceDatabase[] {
-    return getWorkspaceDatabases(this.model.store.workspace);
+    const workspace = this.model?.store.workspace ?? this.workspace;
+    if (!workspace) return [];
+    return getWorkspaceDatabases(workspace);
   }
 
   private _ensureRowCache() {
@@ -569,16 +589,31 @@ export function openButtonConfigPanel(
   anchor: HTMLElement,
   onSave: (config: ButtonAutomationConfig) => void
 ) {
+  openButtonAutomationConfigPanel({
+    anchor,
+    workspace: model.store.workspace,
+    config: model.props.automation,
+    onSave,
+  });
+}
+
+export function openButtonAutomationConfigPanel(options: {
+  anchor: HTMLElement;
+  workspace: Workspace;
+  config: ButtonAutomationConfig;
+  onSave: (config: ButtonAutomationConfig) => void;
+}) {
   const panel = document.createElement(
     'affine-button-config-panel'
   ) as ButtonConfigPanel;
-  panel.model = model;
+  panel.workspace = options.workspace;
+  panel.initialConfig = options.config;
   panel.onSave = config => {
-    onSave(config);
+    options.onSave(config);
     popup.close();
   };
   panel.style.position = 'absolute';
-  const popup = createPopup(popupTargetFromElement(anchor), panel, {
+  const popup = createPopup(popupTargetFromElement(options.anchor), panel, {
     onClose: () => panel.remove(),
   });
 }

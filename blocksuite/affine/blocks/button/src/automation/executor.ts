@@ -4,8 +4,10 @@ import {
 } from '@blocksuite/affine-block-database';
 import type {
   ButtonAction,
+  ButtonAutomationConfig,
   ButtonBlockModel,
   ButtonConfirmAction,
+  ButtonSourceContext,
   DatabaseBlockModel,
 } from '@blocksuite/affine-model';
 import type { EditorHost } from '@blocksuite/std';
@@ -33,12 +35,17 @@ export type ExecuteAutomationResult =
       message?: string;
     };
 
-export async function executeButtonAutomation(
-  model: ButtonBlockModel,
+export async function executeButtonAutomationConfig(
+  automation: ButtonAutomationConfig,
   host: EditorHost,
-  provider: ButtonAutomationContextProvider
+  provider: ButtonAutomationContextProvider,
+  options?: {
+    onSourceResolved?: (
+      config: ButtonAutomationConfig,
+      source: ButtonSourceContext
+    ) => void;
+  }
 ): Promise<ExecuteAutomationResult> {
-  const automation = model.props.automation;
   if (!automation.actions.length) {
     return { ok: false, reason: 'error', message: 'No actions configured' };
   }
@@ -52,13 +59,8 @@ export async function executeButtonAutomation(
     };
   }
 
-  if (!model.props.automation.source) {
-    model.store.transact(() => {
-      model.props.automation = {
-        ...automation,
-        source,
-      };
-    });
+  if (!automation.source) {
+    options?.onSourceResolved?.({ ...automation, source }, source);
   }
 
   const ctx = createRuntimeContext({ host, source });
@@ -83,6 +85,21 @@ export async function executeButtonAutomation(
   }
 
   return { ok: true };
+}
+
+export async function executeButtonAutomation(
+  model: ButtonBlockModel,
+  host: EditorHost,
+  provider: ButtonAutomationContextProvider
+): Promise<ExecuteAutomationResult> {
+  return executeButtonAutomationConfig(model.props.automation, host, provider, {
+    onSourceResolved: config => {
+      if (model.props.automation.source) return;
+      model.store.transact(() => {
+        model.props.automation = config;
+      });
+    },
+  });
 }
 
 async function executeAction(

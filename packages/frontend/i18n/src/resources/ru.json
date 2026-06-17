@@ -786,6 +786,8 @@
   "com.affine.page-properties.property.edgelessTheme": "Режим Холста",
   "com.affine.page-properties.property.pageWidth": "Ширина страницы",
   "com.affine.page-properties.property.template": "Шаблон",
+  "com.affine.page-properties.property.button": "Кнопка",
+  "com.affine.page-properties.property.button.tooltips": "Запускайте автоматизации из свойств рабочего пространства. Настройте действия для редактирования страницы или добавления строк в базу данных.",
   "com.affine.page-properties.property.tags.tooltips": "Добавьте соответствующие идентификаторы или категории к документу. Используется для организации контента, улучшения поисковых возможностей и группировки связанных документов.",
   "com.affine.page-properties.property.journal.tooltips": "Указывает, что этот документ является записью в журнале или ежедневной заметкой. Способствует легкому фиксированию идей, быстрой регистрации мыслей и непрерывному личному размышлению.",
   "com.affine.page-properties.property.checkbox.tooltips": "Используйте флажок, чтобы указать, является ли условие истинным или ложным. Используется для подтверждения вариантов, переключения функций или отслеживания состояния задач.",

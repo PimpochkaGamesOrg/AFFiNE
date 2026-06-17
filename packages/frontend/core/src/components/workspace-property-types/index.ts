@@ -14,6 +14,7 @@ import {
   MemberIcon,
   NumberIcon,
   PropertyIcon,
+  SettingsIcon,
   TagIcon,
   TemplateIcon,
   TextIcon,
@@ -22,6 +23,12 @@ import {
 
 import type { DocListPropertyProps, GroupHeaderProps } from '../explorer/types';
 import type { PropertyValueProps } from '../properties/types';
+import {
+  ButtonDocListProperty,
+  ButtonFilterValue,
+  ButtonGroupHeader,
+  ButtonValue,
+} from './button';
 import {
   CheckboxDocListProperty,
   CheckboxFilterValue,
@@ -368,6 +375,22 @@ export const WorkspacePropertyTypes = {
     filterValue: TemplateFilterValue,
     defaultFilter: { method: 'is', value: 'true' },
   },
+  button: {
+    icon: SettingsIcon,
+    value: ButtonValue,
+    name: 'com.affine.page-properties.property.button',
+    description: 'com.affine.page-properties.property.button.tooltips',
+    filterMethod: {
+      'is-not-empty': 'com.affine.filter.is not empty',
+      'is-empty': 'com.affine.filter.is empty',
+    },
+    allowInGroupBy: false,
+    allowInOrderBy: false,
+    filterValue: ButtonFilterValue,
+    defaultFilter: { method: 'is-not-empty' },
+    docListProperty: ButtonDocListProperty,
+    groupHeader: ButtonGroupHeader,
+  },
   unknown: {
     icon: PropertyIcon,
     name: 'Unknown',
@@ -410,3 +433,5 @@ export const isSupportedWorkspacePropertyType = (
 ): type is WorkspacePropertyType => {
   return type && type !== 'unknown' ? type in WorkspacePropertyTypes : false;
 };
+
+export { getButtonPropertyCreatePayload } from './button';

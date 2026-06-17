@@ -17,6 +17,7 @@ import { useCallback, useState } from 'react';
 
 import { useGuard } from '../../guard';
 import {
+  getButtonPropertyCreatePayload,
   isSupportedWorkspacePropertyType,
   WorkspacePropertyTypes,
 } from '../../workspace-property-types';
@@ -53,6 +54,9 @@ export const WorkspacePropertySidebar = () => {
         type: option.type,
         index: workspacePropertyService.indexAt('after'),
         isDeleted: false,
+        ...(option.type === 'button'
+          ? getButtonPropertyCreatePayload(name)
+          : {}),
       });
       setNewPropertyId(newProperty.id);
       track.doc.sidepanel.property.addProperty({

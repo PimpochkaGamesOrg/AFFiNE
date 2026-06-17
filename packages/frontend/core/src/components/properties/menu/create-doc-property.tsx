@@ -10,6 +10,7 @@ import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback } from 'react';
 
 import {
+  getButtonPropertyCreatePayload,
   isSupportedWorkspacePropertyType,
   WorkspacePropertyTypes,
 } from '../../workspace-property-types';
@@ -46,6 +47,9 @@ export const CreatePropertyMenuItems = ({
         type: option.type,
         index: workspacePropertyService.indexAt(at),
         isDeleted: false,
+        ...(option.type === 'button'
+          ? getButtonPropertyCreatePayload(name)
+          : {}),
       });
       onCreated?.(newProperty);
     },

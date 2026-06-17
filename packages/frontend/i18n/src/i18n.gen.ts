@@ -3233,6 +3233,10 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.page-properties.property.template"](): string;
     /**
+      * `Button`
+      */
+    ["com.affine.page-properties.property.button"](): string;
+    /**
       * `Add relevant identifiers or categories to the doc. Useful for organizing content, improving searchability, and grouping related docs together.`
       */
     ["com.affine.page-properties.property.tags.tooltips"](): string;
@@ -3308,6 +3312,10 @@ export function useAFFiNEI18N(): {
       * `Mark this doc as a template, which can be used to create new docs.`
       */
     ["com.affine.page-properties.property.template.tooltips"](): string;
+    /**
+      * `Run automations from workspace properties. Configure actions to edit this page or add rows to a database.`
+      */
+    ["com.affine.page-properties.property.button.tooltips"](): string;
     /**
       * `Created by {{userName}}`
       */

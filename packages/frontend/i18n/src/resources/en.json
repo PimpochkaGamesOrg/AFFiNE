@@ -802,6 +802,8 @@
   "com.affine.page-properties.property.edgelessTheme": "Edgeless theme",
   "com.affine.page-properties.property.pageWidth": "Page width",
   "com.affine.page-properties.property.template": "Template",
+  "com.affine.page-properties.property.button": "Button",
+  "com.affine.page-properties.property.button.tooltips": "Run automations from workspace properties. Configure actions to edit this page or add rows to a database.",
   "com.affine.page-properties.property.tags.tooltips": "Add relevant identifiers or categories to the doc. Useful for organizing content, improving searchability, and grouping related docs together.",
   "com.affine.page-properties.property.journal.tooltips": "Indicates that this doc is a journal entry or daily note. Facilitates easy capture of ideas, quick logging of thoughts, and ongoing personal reflection.",
   "com.affine.page-properties.property.checkbox.tooltips": "Use a checkbox to indicate whether a condition is true or false. Useful for confirming options, toggling features, or tracking task states.",
