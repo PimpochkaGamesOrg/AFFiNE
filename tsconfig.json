@@ -52,6 +52,7 @@
     { "path": "./blocksuite/affine/all" },
     { "path": "./blocksuite/affine/blocks/attachment" },
     { "path": "./blocksuite/affine/blocks/bookmark" },
+    { "path": "./blocksuite/affine/blocks/button" },
     { "path": "./blocksuite/affine/blocks/callout" },
     { "path": "./blocksuite/affine/blocks/code" },
     { "path": "./blocksuite/affine/blocks/data-view" },

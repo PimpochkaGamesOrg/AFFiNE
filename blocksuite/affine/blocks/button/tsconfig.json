@@ -7,15 +7,15 @@
   },
   "include": ["./src"],
   "references": [
+    { "path": "../database" },
     { "path": "../../components" },
-    { "path": "../../data-view" },
     { "path": "../../ext-loader" },
-    { "path": "../../inline/preset" },
+    { "path": "../../inlines/preset" },
     { "path": "../../model" },
     { "path": "../../rich-text" },
     { "path": "../../shared" },
     { "path": "../../widgets/slash-menu" },
-    { "path": "../database" },
+    { "path": "../../data-view" },
     { "path": "../../../framework/global" },
     { "path": "../../../framework/std" },
     { "path": "../../../framework/store" }

@@ -7,6 +7,7 @@ export const PackageList = [
     workspaceDependencies: [
       'blocksuite/affine/blocks/attachment',
       'blocksuite/affine/blocks/bookmark',
+      'blocksuite/affine/blocks/button',
       'blocksuite/affine/blocks/callout',
       'blocksuite/affine/blocks/code',
       'blocksuite/affine/blocks/data-view',
@@ -103,6 +104,24 @@ export const PackageList = [
       'blocksuite/affine/model',
       'blocksuite/affine/shared',
       'blocksuite/affine/widgets/slash-menu',
+      'blocksuite/framework/global',
+      'blocksuite/framework/std',
+      'blocksuite/framework/store',
+    ],
+  },
+  {
+    location: 'blocksuite/affine/blocks/button',
+    name: '@blocksuite/affine-block-button',
+    workspaceDependencies: [
+      'blocksuite/affine/blocks/database',
+      'blocksuite/affine/components',
+      'blocksuite/affine/ext-loader',
+      'blocksuite/affine/inlines/preset',
+      'blocksuite/affine/model',
+      'blocksuite/affine/rich-text',
+      'blocksuite/affine/shared',
+      'blocksuite/affine/widgets/slash-menu',
+      'blocksuite/affine/data-view',
       'blocksuite/framework/global',
       'blocksuite/framework/std',
       'blocksuite/framework/store',
@@ -1453,6 +1472,7 @@ export type PackageName =
   | '@blocksuite/affine'
   | '@blocksuite/affine-block-attachment'
   | '@blocksuite/affine-block-bookmark'
+  | '@blocksuite/affine-block-button'
   | '@blocksuite/affine-block-callout'
   | '@blocksuite/affine-block-code'
   | '@blocksuite/affine-block-data-view'
