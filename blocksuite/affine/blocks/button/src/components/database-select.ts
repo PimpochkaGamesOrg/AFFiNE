@@ -76,9 +76,15 @@ export class ButtonDatabaseSelect extends ShadowlessElement {
       })
     );
 
+    const container =
+      this.closest('editor-host') ??
+      this.closest('.data-view-popup-container') ??
+      document.body;
+
     showPopFilterableList({
       referenceElement: this._trigger,
       abortController: this._abortController,
+      container,
       options: {
         placeholder: 'Search databases',
         items,
@@ -89,7 +95,7 @@ export class ButtonDatabaseSelect extends ShadowlessElement {
         },
       },
       portalStyles: {
-        zIndex: 'var(--affine-z-index-popover)',
+        zIndex: 'calc(var(--affine-z-index-popover) + 2)',
       },
     });
   }
