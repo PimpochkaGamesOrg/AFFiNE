@@ -6,8 +6,18 @@ import {
 } from '@affine/component';
 import type { DocCustomPropertyInfo } from '@affine/core/modules/db';
 import { WorkspacePropertyService } from '@affine/core/modules/workspace-property';
+import { WorkspaceService } from '@affine/core/modules/workspace';
 import { Trans, useI18n } from '@affine/i18n';
-import { DeleteIcon, InvisibleIcon, ViewIcon } from '@blocksuite/icons/rc';
+import {
+  effects as registerButtonEffects,
+  openButtonAutomationConfigPanel,
+} from '@blocksuite/affine/blocks/button';
+import {
+  DeleteIcon,
+  InvisibleIcon,
+  SettingsIcon,
+  ViewIcon,
+} from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import {
   type KeyboardEventHandler,
@@ -21,6 +31,11 @@ import {
   isSupportedWorkspacePropertyType,
   WorkspacePropertyTypes,
 } from '../../workspace-property-types';
+import {
+  buildButtonPropertyAdditionalData,
+  isSourceDatabaseUsedByAnotherButtonProperty,
+  parseButtonPropertyData,
+} from '../../workspace-property-types/button-utils';
 import { WorkspacePropertyIconSelector } from '../icons/icons-selector';
 import { WorkspacePropertyIcon } from '../icons/workspace-property-icon';
 import * as styles from './edit-doc-property.css';
@@ -39,6 +54,8 @@ export const EditWorkspacePropertyMenuItems = ({
 }) => {
   const t = useI18n();
   const workspacePropertyService = useService(WorkspacePropertyService);
+  const workspaceService = useService(WorkspaceService);
+  const workspaceProperties = useLiveData(workspacePropertyService.properties$);
   const propertyInfo = useLiveData(
     workspacePropertyService.propertyInfo$(propertyId)
   );
@@ -128,6 +145,43 @@ export const EditWorkspacePropertyMenuItems = ({
     [workspacePropertyService, propertyId, onPropertyInfoChange]
   );
 
+  const handleConfigureAutomation = useCallback(
+    (e: MouseEvent) => {
+      e.preventDefault();
+      if (!propertyInfo || propertyType !== 'button') return;
+      registerButtonEffects();
+      const automation = parseButtonPropertyData(propertyInfo);
+      openButtonAutomationConfigPanel({
+        anchor: e.currentTarget as HTMLElement,
+        workspace: workspaceService.workspace.docCollection,
+        config: automation,
+        onSave: config => {
+          if (
+            config.sourceDatabase &&
+            isSourceDatabaseUsedByAnotherButtonProperty(
+              workspaceProperties,
+              propertyId,
+              config.sourceDatabase
+            )
+          ) {
+            return;
+          }
+          workspacePropertyService.updatePropertyInfo(propertyId, {
+            additionalData: buildButtonPropertyAdditionalData(config),
+          });
+        },
+      });
+    },
+    [
+      propertyId,
+      propertyInfo,
+      propertyType,
+      workspaceProperties,
+      workspacePropertyService,
+      workspaceService,
+    ]
+  );
+
   if (!propertyInfo || !isSupportedWorkspacePropertyType(propertyType)) {
     return null;
   }
@@ -174,6 +228,17 @@ export const EditWorkspacePropertyMenuItems = ({
           {t[`com.affine.page-properties.property.${propertyType}`]()}
         </div>
       </div>
+      {propertyType === 'button' && !readonly ? (
+        <>
+          <MenuSeparator />
+          <MenuItem
+            prefixIcon={<SettingsIcon />}
+            onClick={handleConfigureAutomation}
+          >
+            Configure automation
+          </MenuItem>
+        </>
+      ) : null}
       <MenuSeparator />
       <MenuItem
         prefixIcon={<ViewIcon />}

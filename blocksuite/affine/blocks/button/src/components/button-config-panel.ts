@@ -268,6 +268,57 @@ export class ButtonConfigPanel extends ShadowlessElement {
     });
   }
 
+  private _renderSourceDatabaseSelect() {
+    const draft = this.draft;
+    const selectedKey = draft.sourceDatabase
+      ? `${draft.sourceDatabase.databaseDocId}:${draft.sourceDatabase.databaseBlockId}`
+      : '';
+    return html`
+      <div style="margin-bottom: 16px;">
+        <div style=${labelStyle}>Source database</div>
+        <select
+          style=${inputStyle}
+          .value=${selectedKey}
+          @change=${(e: Event) => {
+            const value = (e.target as HTMLSelectElement).value;
+            const db = this.databases.find(
+              item => `${item.databaseDocId}:${item.databaseBlockId}` === value
+            );
+            if (!db) return;
+            this._updateDraft(d => {
+              d.sourceDatabase = {
+                databaseDocId: db.databaseDocId,
+                databaseBlockId: db.databaseBlockId,
+                databaseName: db.name,
+              };
+              d.source = undefined;
+            });
+          }}
+        >
+          <option value="" disabled ?selected=${!selectedKey}>
+            Select source database
+          </option>
+          ${repeat(
+            this.databases,
+            db => `${db.databaseDocId}:${db.databaseBlockId}`,
+            db => html`
+              <option
+                value="${db.databaseDocId}:${db.databaseBlockId}"
+                ?selected=${selectedKey ===
+                `${db.databaseDocId}:${db.databaseBlockId}`}
+              >
+                ${db.name || 'Untitled database'}
+              </option>
+            `
+          )}
+        </select>
+        <div style="opacity:0.55;font-size:11px;margin-top:4px;">
+          This button is shown only on pages linked from the selected database.
+        </div>
+      </div>
+    `;
+  }
+
   private _renderDatabaseSelect(action: ButtonAddPageAction, index: number) {
     const selectedKey = `${action.databaseDocId}:${action.databaseBlockId}`;
     return html`
@@ -513,6 +564,8 @@ export class ButtonConfigPanel extends ShadowlessElement {
           }}
         />
 
+        ${this._renderSourceDatabaseSelect()}
+
         <div style="${labelStyle};margin-bottom:12px;">When</div>
         <div style="font-size:14px;font-weight:600;margin-bottom:16px;">
           Button is clicked
@@ -608,12 +661,16 @@ export function openButtonAutomationConfigPanel(options: {
   ) as ButtonConfigPanel;
   panel.workspace = options.workspace;
   panel.initialConfig = options.config;
+  panel.style.position = 'absolute';
+  const closePopup = createPopup(
+    popupTargetFromElement(options.anchor),
+    panel,
+    {
+      onClose: () => panel.remove(),
+    }
+  );
   panel.onSave = config => {
     options.onSave(config);
-    popup.close();
+    closePopup();
   };
-  panel.style.position = 'absolute';
-  const popup = createPopup(popupTargetFromElement(options.anchor), panel, {
-    onClose: () => panel.remove(),
-  });
 }

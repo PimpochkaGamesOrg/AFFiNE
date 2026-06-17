@@ -8,8 +8,8 @@ import {
   useDraggable,
   useDropTarget,
 } from '@affine/component';
-import type { DocCustomPropertyInfo } from '@affine/core/modules/db';
 import { DocService } from '@affine/core/modules/doc';
+import type { DocCustomPropertyInfo } from '@affine/core/modules/db';
 import { DocDatabaseBacklinkInfo } from '@affine/core/modules/doc-info';
 import type {
   DatabaseRow,
@@ -18,6 +18,7 @@ import type {
 import { DocIntegrationPropertiesTable } from '@affine/core/modules/integration';
 import { ViewService, WorkbenchService } from '@affine/core/modules/workbench';
 import { WorkspacePropertyService } from '@affine/core/modules/workspace-property';
+import { WorkspaceService } from '@affine/core/modules/workspace';
 import type { AffineDNDData } from '@affine/core/types/dnd';
 import { useI18n } from '@affine/i18n';
 import { track } from '@affine/track';
@@ -37,6 +38,10 @@ import {
   isSupportedWorkspacePropertyType,
   WorkspacePropertyTypes,
 } from '../workspace-property-types';
+import {
+  isButtonPropertyVisible,
+  parseButtonPropertyData,
+} from '../workspace-property-types/button-utils';
 import { WorkspacePropertyIcon } from './icons/workspace-property-icon';
 import { CreatePropertyMenuItems } from './menu/create-doc-property';
 import { EditWorkspacePropertyMenuItems } from './menu/edit-doc-property';
@@ -135,6 +140,7 @@ export const WorkspacePropertyRow = ({
   onPropertyInfoChange,
 }: WorkspacePropertyRowProps) => {
   const docService = useService(DocService);
+  const workspaceService = useService(WorkspaceService);
   const workspacePropertyService = useService(WorkspacePropertyService);
   const customPropertyValue = useLiveData(
     docService.doc.customProperty$(propertyInfo.id)
@@ -215,7 +221,26 @@ export const WorkspacePropertyRow = ({
     [docId, workspacePropertyService, propertyInfo.id, propertyInfoReadonly]
   );
 
+  const livePropertyInfo = useLiveData(
+    workspacePropertyService.propertyInfo$(propertyInfo.id)
+  );
+
   if (!ValueRenderer || typeof ValueRenderer !== 'function') return null;
+
+  if (propertyInfo.type === 'button') {
+    const automation = parseButtonPropertyData(
+      livePropertyInfo ?? propertyInfo
+    );
+    if (
+      !isButtonPropertyVisible(
+        workspaceService.workspace.docCollection,
+        docId,
+        automation
+      )
+    ) {
+      return null;
+    }
+  }
 
   return (
     <PropertyRoot

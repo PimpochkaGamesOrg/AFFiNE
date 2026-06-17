@@ -63,6 +63,12 @@ export type ButtonAction =
   | ButtonAddPageAction
   | ButtonEditAction;
 
+export type ButtonSourceDatabase = {
+  databaseDocId: string;
+  databaseBlockId: string;
+  databaseName?: string;
+};
+
 export type ButtonSourceContext = {
   databaseDocId: string;
   databaseBlockId: string;
@@ -71,6 +77,7 @@ export type ButtonSourceContext = {
 
 export type ButtonAutomationConfig = {
   label: string;
+  sourceDatabase?: ButtonSourceDatabase;
   source?: ButtonSourceContext;
   actions: ButtonAction[];
 };

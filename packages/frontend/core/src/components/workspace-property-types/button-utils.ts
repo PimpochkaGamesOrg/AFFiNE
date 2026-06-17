@@ -1,23 +1,38 @@
 import type { DocCustomPropertyInfo } from '@affine/core/modules/db';
 import type { ButtonAutomationConfig } from '@blocksuite/affine/model';
 import { defaultButtonAutomation } from '@blocksuite/affine/model';
+import { findSourceRowForDocInDatabase } from '@blocksuite/affine/blocks/button';
+import type { Workspace } from '@blocksuite/store';
 
 export type ButtonPropertyAdditionalData = {
   automation: ButtonAutomationConfig;
 };
 
 export function parseButtonPropertyData(
-  propertyInfo?: DocCustomPropertyInfo
-): ButtonPropertyAdditionalData {
+  propertyInfo?: DocCustomPropertyInfo | null
+): ButtonAutomationConfig {
   const data = propertyInfo?.additionalData as
     | Partial<ButtonPropertyAdditionalData>
     | undefined;
   if (data?.automation) {
-    return {
-      automation: JSON.parse(JSON.stringify(data.automation)),
-    };
+    const parsed = JSON.parse(
+      JSON.stringify(data.automation)
+    ) as ButtonAutomationConfig;
+    const { source: _source, ...sharedAutomation } = parsed;
+    return sharedAutomation;
   }
-  return { automation: defaultButtonAutomation() };
+  const automation = defaultButtonAutomation();
+  if (propertyInfo?.name) {
+    automation.label = propertyInfo.name;
+  }
+  return automation;
+}
+
+export function buildButtonPropertyAdditionalData(
+  automation: ButtonAutomationConfig
+): ButtonPropertyAdditionalData {
+  const { source: _source, ...sharedAutomation } = automation;
+  return { automation: sharedAutomation };
 }
 
 export function createButtonPropertyAdditionalData(
@@ -28,4 +43,40 @@ export function createButtonPropertyAdditionalData(
     automation.label = name;
   }
   return { automation };
+}
+
+export function isButtonPropertyVisible(
+  workspace: Workspace,
+  docId: string,
+  automation: ButtonAutomationConfig
+): boolean {
+  const { sourceDatabase } = automation;
+  if (!sourceDatabase?.databaseDocId || !sourceDatabase.databaseBlockId) {
+    return false;
+  }
+  return !!findSourceRowForDocInDatabase(
+    workspace,
+    docId,
+    sourceDatabase.databaseDocId,
+    sourceDatabase.databaseBlockId
+  );
+}
+
+export function isSourceDatabaseUsedByAnotherButtonProperty(
+  properties: DocCustomPropertyInfo[],
+  propertyId: string,
+  sourceDatabase: ButtonAutomationConfig['sourceDatabase']
+): boolean {
+  if (!sourceDatabase?.databaseDocId || !sourceDatabase.databaseBlockId) {
+    return false;
+  }
+  const key = `${sourceDatabase.databaseDocId}:${sourceDatabase.databaseBlockId}`;
+  return properties.some(property => {
+    if (property.id === propertyId || property.type !== 'button') return false;
+    const automation = parseButtonPropertyData(property);
+    const otherKey = automation.sourceDatabase
+      ? `${automation.sourceDatabase.databaseDocId}:${automation.sourceDatabase.databaseBlockId}`
+      : '';
+    return otherKey === key;
+  });
 }

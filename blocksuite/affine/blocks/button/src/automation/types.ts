@@ -1,6 +1,7 @@
 import type { DatabaseBlockDataSource } from '@blocksuite/affine-block-database';
 import type {
   ButtonSourceContext,
+  ButtonSourceDatabase,
   DatabaseBlockModel,
 } from '@blocksuite/affine-model';
 import type { EditorHost } from '@blocksuite/std';
@@ -50,6 +51,7 @@ export type ButtonAutomationContextProvider = {
     host: EditorHost;
     currentDocId: string;
     storedSource?: ButtonSourceContext;
+    sourceDatabase?: ButtonSourceDatabase;
   }) => Promise<ButtonSourceContext | undefined>;
   resolveDatabaseTarget: (input: {
     host: EditorHost;

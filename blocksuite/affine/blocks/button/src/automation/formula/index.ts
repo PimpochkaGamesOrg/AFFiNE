@@ -236,10 +236,6 @@ function parsePrimary(
     }
   }
 
-  if (input.slice(i, i + 9).toLowerCase() === 'this page') {
-    return parsePrimary(input, i);
-  }
-
   if (input[i] === '(') {
     const inner = parseExpr(input, i + 1);
     if (!inner) return null;
@@ -403,8 +399,14 @@ export function analyzeFormula(expr: ButtonValueExpression): FormulaWarning[] {
       node.parts.forEach(part => walk(part, inDateRange));
       return;
     }
-    if (node.type === 'if_empty' || node.type === 'if') {
+    if (node.type === 'if_empty') {
       walk(node.value, inDateRange);
+      walk(node.then, inDateRange);
+      walk(node.else, inDateRange);
+      return;
+    }
+    if (node.type === 'if') {
+      walk(node.condition, inDateRange);
       walk(node.then, inDateRange);
       walk(node.else, inDateRange);
       return;

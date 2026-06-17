@@ -53,7 +53,11 @@ export function createPropertyResolver(): PropertyResolver {
 export async function resolveSourceContext(
   provider: ButtonAutomationContextProvider,
   host: EditorHost,
-  storedSource?: ButtonSourceContext
+  storedSource?: ButtonSourceContext,
+  sourceDatabase?: {
+    databaseDocId: string;
+    databaseBlockId: string;
+  }
 ): Promise<ButtonSourceContext | undefined> {
   const currentDocId = host.store.id;
   if (storedSource) {
@@ -70,6 +74,7 @@ export async function resolveSourceContext(
     host,
     currentDocId,
     storedSource,
+    sourceDatabase,
   });
 }
 

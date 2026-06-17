@@ -35,7 +35,12 @@ export function getButtonAutomationProvider(
 
 export function createDefaultButtonAutomationProvider(): ButtonAutomationProvider {
   return {
-    async resolveSourceContext({ host, currentDocId, storedSource }) {
+    async resolveSourceContext({
+      host,
+      currentDocId,
+      storedSource,
+      sourceDatabase,
+    }) {
       if (storedSource) {
         const database = findDatabaseInWorkspace(
           host.store.workspace,
@@ -48,7 +53,11 @@ export function createDefaultButtonAutomationProvider(): ButtonAutomationProvide
           return storedSource;
         }
       }
-      return findSourceRowForDoc(host.store.workspace, currentDocId);
+      return findSourceRowForDoc(
+        host.store.workspace,
+        currentDocId,
+        sourceDatabase
+      );
     },
     async resolveDatabaseTarget({ host, databaseDocId, databaseBlockId }) {
       const database = findDatabaseInWorkspace(

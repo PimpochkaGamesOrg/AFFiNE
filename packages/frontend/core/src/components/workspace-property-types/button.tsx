@@ -1,7 +1,8 @@
 import { PropertyValue } from '@affine/component';
+import { DocService } from '@affine/core/modules/doc';
 import { EditorService } from '@affine/core/modules/editor';
-import { WorkspaceService } from '@affine/core/modules/workspace';
 import { WorkspacePropertyService } from '@affine/core/modules/workspace-property';
+import { WorkspaceService } from '@affine/core/modules/workspace';
 import {
   effects as registerButtonEffects,
   executeButtonAutomationConfig,
@@ -13,11 +14,14 @@ import { SettingsIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { type MouseEvent, useCallback, useRef, useState } from 'react';
 
+import { useGuard } from '../guard';
 import type { PropertyValueProps } from '../properties/types';
 import * as styles from './button.css';
 import {
-  type ButtonPropertyAdditionalData,
+  buildButtonPropertyAdditionalData,
   createButtonPropertyAdditionalData,
+  isButtonPropertyVisible,
+  isSourceDatabaseUsedByAnotherButtonProperty,
   parseButtonPropertyData,
 } from './button-utils';
 
@@ -25,50 +29,56 @@ function ensureButtonEffects() {
   registerButtonEffects();
 }
 
-function saveButtonPropertyData(
-  propertyId: string,
-  data: ButtonPropertyAdditionalData,
-  workspacePropertyService: WorkspacePropertyService
-) {
-  workspacePropertyService.updatePropertyInfo(propertyId, {
-    additionalData: data,
-  });
-}
-
 export const ButtonValue = ({ propertyInfo, readonly }: PropertyValueProps) => {
   const editorService = useService(EditorService);
   const workspaceService = useService(WorkspaceService);
   const workspacePropertyService = useService(WorkspacePropertyService);
+  const docService = useService(DocService);
   const editorContainer = useLiveData(editorService.editor.editorContainer$);
   const containerRef = useRef<HTMLDivElement>(null);
   const [running, setRunning] = useState(false);
+  const canConfigure = useGuard('Workspace_Properties_Update');
 
   const propertyId = propertyInfo?.id ?? '';
   const livePropertyInfo = useLiveData(
     workspacePropertyService.propertyInfo$(propertyId)
   );
-  const { automation } = parseButtonPropertyData(
-    livePropertyInfo ?? propertyInfo
+  const workspaceProperties = useLiveData(workspacePropertyService.properties$);
+  const automation = parseButtonPropertyData(livePropertyInfo ?? propertyInfo);
+  const docId = docService.doc.id;
+  const visible = isButtonPropertyVisible(
+    workspaceService.workspace.docCollection,
+    docId,
+    automation
   );
-  const disabled = running || automation.actions.length === 0;
+  const disabled =
+    running || automation.actions.length === 0 || !automation.sourceDatabase;
 
   const persistAutomation = useCallback(
     (config: ButtonAutomationConfig) => {
       if (!propertyInfo?.id) return;
-      saveButtonPropertyData(
-        propertyInfo.id,
-        { automation: config },
-        workspacePropertyService
-      );
+      if (
+        config.sourceDatabase &&
+        isSourceDatabaseUsedByAnotherButtonProperty(
+          workspaceProperties,
+          propertyInfo.id,
+          config.sourceDatabase
+        )
+      ) {
+        return;
+      }
+      workspacePropertyService.updatePropertyInfo(propertyInfo.id, {
+        additionalData: buildButtonPropertyAdditionalData(config),
+      });
     },
-    [propertyInfo, workspacePropertyService]
+    [propertyInfo, workspaceProperties, workspacePropertyService]
   );
 
   const handleConfigure = useCallback(
     (event: MouseEvent) => {
       event.preventDefault();
       event.stopPropagation();
-      if (readonly || !propertyInfo?.id || !containerRef.current) return;
+      if (!canConfigure || !containerRef.current) return;
       ensureButtonEffects();
       openButtonAutomationConfigPanel({
         anchor: containerRef.current,
@@ -77,7 +87,7 @@ export const ButtonValue = ({ propertyInfo, readonly }: PropertyValueProps) => {
         onSave: persistAutomation,
       });
     },
-    [automation, persistAutomation, propertyInfo, readonly, workspaceService]
+    [automation, canConfigure, persistAutomation, workspaceService]
   );
 
   const handleRun = useCallback(
@@ -93,12 +103,7 @@ export const ButtonValue = ({ propertyInfo, readonly }: PropertyValueProps) => {
       if (!provider) return;
 
       setRunning(true);
-      executeButtonAutomationConfig(automation, host, provider, {
-        onSourceResolved: config => {
-          if (automation.source) return;
-          persistAutomation(config);
-        },
-      })
+      executeButtonAutomationConfig(automation, host, provider)
         .then(result => {
           if (!result.ok && result.reason !== 'cancelled' && result.message) {
             provider.notify?.({
@@ -112,8 +117,12 @@ export const ButtonValue = ({ propertyInfo, readonly }: PropertyValueProps) => {
           setRunning(false);
         });
     },
-    [automation, disabled, editorContainer, persistAutomation, readonly]
+    [automation, disabled, editorContainer, readonly]
   );
+
+  if (!visible) {
+    return null;
+  }
 
   return (
     <PropertyValue readonly={readonly}>
@@ -126,7 +135,7 @@ export const ButtonValue = ({ propertyInfo, readonly }: PropertyValueProps) => {
         >
           {automation.label || propertyInfo?.name || 'Button'}
         </button>
-        {!readonly ? (
+        {canConfigure ? (
           <button
             type="button"
             className={styles.configureButton}

@@ -50,7 +50,12 @@ export async function executeButtonAutomationConfig(
     return { ok: false, reason: 'error', message: 'No actions configured' };
   }
 
-  const source = await resolveSourceContext(provider, host, automation.source);
+  const source = await resolveSourceContext(
+    provider,
+    host,
+    automation.source,
+    automation.sourceDatabase
+  );
   if (!source) {
     return {
       ok: false,
@@ -249,9 +254,37 @@ export function listWorkspaceDatabases(input: { workspace: Workspace }) {
   return result;
 }
 
+export function findSourceRowForDocInDatabase(
+  workspace: Workspace,
+  docId: string,
+  databaseDocId: string,
+  databaseBlockId: string
+): { rowId: string } | undefined {
+  const database = findDatabaseInWorkspace(
+    workspace,
+    databaseDocId,
+    databaseBlockId
+  );
+  if (!database) return undefined;
+  const dataSource = new DatabaseBlockDataSource(database);
+  for (const rowId of dataSource.rows$.value) {
+    const linked = getSingleDocIdFromText(
+      dataSource.doc.getBlock(rowId)?.model?.text
+    );
+    if (linked === docId) {
+      return { rowId };
+    }
+  }
+  return undefined;
+}
+
 export function findSourceRowForDoc(
   workspace: Workspace,
-  docId: string
+  docId: string,
+  sourceDatabase?: {
+    databaseDocId: string;
+    databaseBlockId: string;
+  }
 ):
   | {
       databaseDocId: string;
@@ -259,6 +292,20 @@ export function findSourceRowForDoc(
       rowId: string;
     }
   | undefined {
+  if (sourceDatabase?.databaseDocId && sourceDatabase?.databaseBlockId) {
+    const row = findSourceRowForDocInDatabase(
+      workspace,
+      docId,
+      sourceDatabase.databaseDocId,
+      sourceDatabase.databaseBlockId
+    );
+    if (!row) return undefined;
+    return {
+      databaseDocId: sourceDatabase.databaseDocId,
+      databaseBlockId: sourceDatabase.databaseBlockId,
+      rowId: row.rowId,
+    };
+  }
   for (const item of listWorkspaceDatabases({ workspace })) {
     const database = findDatabaseInWorkspace(
       workspace,
