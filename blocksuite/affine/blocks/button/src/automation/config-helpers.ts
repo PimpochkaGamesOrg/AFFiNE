@@ -47,9 +47,7 @@ export function createEmptyAddPageAction(
     databaseBlockId: database?.databaseBlockId ?? '',
     databaseName: database?.name,
     template: 'empty',
-    properties: {
-      Name: { type: 'property', name: 'Name' },
-    },
+    properties: {},
   };
 }
 

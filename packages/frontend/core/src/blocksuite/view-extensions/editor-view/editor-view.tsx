@@ -16,6 +16,7 @@ import type { TemplateResult } from 'lit';
 import { z } from 'zod';
 
 import { patchForAudioEmbedView } from './audio/audio-view';
+import { patchButtonAutomationProvider } from './button-automation-provider';
 import { buildDocDisplayMetaExtension } from './display-meta';
 import { patchDocModeService } from './doc-mode-service';
 import { patchDocUrlExtensions } from './doc-url';
@@ -102,6 +103,7 @@ export class AffineEditorViewExtension extends ViewExtensionProvider<AffineEdito
     context
       .register([
         patchReferenceRenderer(reactToLit, referenceRenderer),
+        patchButtonAutomationProvider(),
         patchNotificationService(confirmModal),
         patchOpenDocExtension(),
         patchSideBarService(framework),

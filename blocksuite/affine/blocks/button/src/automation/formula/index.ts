@@ -338,7 +338,8 @@ export function normalizeExpression(
   expr: ButtonValueExpression
 ): ButtonValueExpression {
   if (expr.type === 'formula') {
-    return parseFormula(expr.source);
+    const parsed = parseFormula(expr.source);
+    return parsed.type === 'formula' ? expr : parsed;
   }
   return expr;
 }
@@ -376,9 +377,16 @@ export function analyzeFormula(expr: ButtonValueExpression): FormulaWarning[] {
   const normalized = normalizeExpression(expr);
   const warnings: FormulaWarning[] = [];
 
-  const walk = (node: ButtonValueExpression, inDateRange = false) => {
+  const walk = (
+    node: ButtonValueExpression,
+    inDateRange = false,
+    depth = 0
+  ) => {
+    if (depth > 64) return;
     if (node.type === 'formula') {
-      walk(parseFormula(node.source), inDateRange);
+      const parsed = parseFormula(node.source);
+      if (parsed.type === 'formula') return;
+      walk(parsed, inDateRange, depth + 1);
       return;
     }
     if (
@@ -391,31 +399,31 @@ export function analyzeFormula(expr: ButtonValueExpression): FormulaWarning[] {
       });
     }
     if (node.type === 'date_range') {
-      walk(node.start, true);
-      walk(node.end, true);
+      walk(node.start, true, depth + 1);
+      walk(node.end, true, depth + 1);
       return;
     }
     if (node.type === 'concat') {
-      node.parts.forEach(part => walk(part, inDateRange));
+      node.parts.forEach(part => walk(part, inDateRange, depth + 1));
       return;
     }
     if (node.type === 'if_empty') {
-      walk(node.value, inDateRange);
-      walk(node.then, inDateRange);
-      walk(node.else, inDateRange);
+      walk(node.value, inDateRange, depth + 1);
+      walk(node.then, inDateRange, depth + 1);
+      walk(node.else, inDateRange, depth + 1);
       return;
     }
     if (node.type === 'if') {
-      walk(node.condition, inDateRange);
-      walk(node.then, inDateRange);
-      walk(node.else, inDateRange);
+      walk(node.condition, inDateRange, depth + 1);
+      walk(node.then, inDateRange, depth + 1);
+      walk(node.else, inDateRange, depth + 1);
       return;
     }
     if (node.type === 'empty' || node.type === 'not_empty') {
-      walk(node.value, inDateRange);
+      walk(node.value, inDateRange, depth + 1);
     }
     if (node.type === 'not_empty_marker') {
-      walk(node.value, inDateRange);
+      walk(node.value, inDateRange, depth + 1);
     }
   };
 

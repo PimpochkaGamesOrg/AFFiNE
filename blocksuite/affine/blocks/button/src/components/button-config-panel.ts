@@ -223,12 +223,14 @@ export class ButtonConfigPanel extends ShadowlessElement {
         return;
       }
       if (type === 'add_page') {
-        draft.actions.push(createEmptyAddPageAction(this.databases[0]));
-        this._propertyRows.set(index, []);
+        const action = createEmptyAddPageAction(this.databases[0]);
+        draft.actions.push(action);
+        this._propertyRows.set(index, rowsFromProperties(action.properties));
         return;
       }
-      draft.actions.push(createEmptyEditAction());
-      this._editRows.set(index, []);
+      const editAction = createEmptyEditAction();
+      draft.actions.push(editAction);
+      this._editRows.set(index, rowsFromProperties(editAction.properties));
     });
   }
 
@@ -254,17 +256,32 @@ export class ButtonConfigPanel extends ShadowlessElement {
     return this._editRows.get(index)!;
   }
 
+  private _propertiesEqual(
+    left: Record<string, ButtonValueExpression>,
+    right: Record<string, ButtonValueExpression>
+  ) {
+    return JSON.stringify(left) === JSON.stringify(right);
+  }
+
   private _syncPropertyRows(index: number, rows: PropertyRow[]) {
     this._propertyRows.set(index, rows);
+    const nextProperties = propertiesFromRows(rows);
+    const action = this.draft.actions[index];
+    if (action?.type !== 'add_page') return;
+    if (this._propertiesEqual(action.properties, nextProperties)) return;
     this._updateAction(index, act => {
-      (act as ButtonAddPageAction).properties = propertiesFromRows(rows);
+      (act as ButtonAddPageAction).properties = nextProperties;
     });
   }
 
   private _syncEditRows(index: number, rows: PropertyRow[]) {
     this._editRows.set(index, rows);
+    const nextProperties = propertiesFromRows(rows);
+    const action = this.draft.actions[index];
+    if (action?.type !== 'edit') return;
+    if (this._propertiesEqual(action.properties, nextProperties)) return;
     this._updateAction(index, act => {
-      (act as ButtonEditAction).properties = propertiesFromRows(rows);
+      (act as ButtonEditAction).properties = nextProperties;
     });
   }
 

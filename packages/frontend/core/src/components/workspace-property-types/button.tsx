@@ -1,4 +1,4 @@
-import { PropertyValue } from '@affine/component';
+import { notify, PropertyValue } from '@affine/component';
 import { DocService } from '@affine/core/modules/doc';
 import { EditorService } from '@affine/core/modules/editor';
 import { WorkspaceService } from '@affine/core/modules/workspace';
@@ -51,8 +51,7 @@ export const ButtonValue = ({ propertyInfo, readonly }: PropertyValueProps) => {
     docId,
     automation
   );
-  const disabled =
-    running || automation.actions.length === 0 || !automation.sourceDatabase;
+  const disabled = running;
 
   const persistAutomation = useCallback(
     (config: ButtonAutomationConfig) => {
@@ -94,30 +93,60 @@ export const ButtonValue = ({ propertyInfo, readonly }: PropertyValueProps) => {
     (event: MouseEvent) => {
       event.preventDefault();
       event.stopPropagation();
-      if (readonly || disabled) return;
+      if (readonly) return;
+
+      if (!automation.sourceDatabase) {
+        notify.warning({
+          title: 'Select a source database in button settings first',
+        });
+        return;
+      }
+      if (automation.actions.length === 0) {
+        notify.warning({
+          title: 'Add at least one action in button settings',
+        });
+        return;
+      }
+      if (running) return;
 
       const host = editorContainer?.host ?? null;
-      if (!host) return;
+      if (!host) {
+        notify.warning({ title: 'Editor is not ready, try again' });
+        return;
+      }
 
       const provider = getButtonAutomationProvider(host.std);
-      if (!provider) return;
+      if (!provider) {
+        notify.error({ title: 'Automation service is unavailable' });
+        return;
+      }
+
+      const label = automation.label || propertyInfo?.name || 'Button';
+      notify({ title: `Running «${label}»...` });
 
       setRunning(true);
       executeButtonAutomationConfig(automation, host, provider)
         .then(result => {
-          if (!result.ok && result.reason !== 'cancelled' && result.message) {
-            provider.notify?.({
-              title: result.message,
-              accent: 'warning',
-            });
+          if (result.ok) {
+            notify.success({ title: `«${label}» completed` });
+            return;
           }
+          if (result.reason === 'cancelled') {
+            notify({ title: 'Automation cancelled' });
+            return;
+          }
+          notify.warning({
+            title: result.message ?? 'Automation failed',
+          });
         })
-        .catch(() => undefined)
+        .catch(() => {
+          notify.error({ title: 'Automation failed unexpectedly' });
+        })
         .finally(() => {
           setRunning(false);
         });
     },
-    [automation, disabled, editorContainer, readonly]
+    [automation, editorContainer, propertyInfo?.name, readonly, running]
   );
 
   if (!visible) {
@@ -133,7 +162,9 @@ export const ButtonValue = ({ propertyInfo, readonly }: PropertyValueProps) => {
           disabled={disabled || readonly}
           onClick={handleRun}
         >
-          {automation.label || propertyInfo?.name || 'Button'}
+          {running
+            ? 'Running...'
+            : automation.label || propertyInfo?.name || 'Button'}
         </button>
         {canConfigure ? (
           <button
