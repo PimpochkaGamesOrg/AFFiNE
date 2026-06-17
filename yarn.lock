@@ -1873,6 +1873,30 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@blocksuite/affine-block-button@workspace:*, @blocksuite/affine-block-button@workspace:blocksuite/affine/blocks/button":
+  version: 0.0.0-use.local
+  resolution: "@blocksuite/affine-block-button@workspace:blocksuite/affine/blocks/button"
+  dependencies:
+    "@blocksuite/affine-block-database": "workspace:*"
+    "@blocksuite/affine-components": "workspace:*"
+    "@blocksuite/affine-ext-loader": "workspace:*"
+    "@blocksuite/affine-inline-preset": "workspace:*"
+    "@blocksuite/affine-model": "workspace:*"
+    "@blocksuite/affine-rich-text": "workspace:*"
+    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/affine-widget-slash-menu": "workspace:*"
+    "@blocksuite/data-view": "workspace:*"
+    "@blocksuite/global": "workspace:*"
+    "@blocksuite/icons": "npm:^2.2.17"
+    "@blocksuite/std": "workspace:*"
+    "@blocksuite/store": "workspace:*"
+    "@emotion/css": "npm:^11.13.5"
+    "@preact/signals-core": "npm:^1.8.0"
+    "@toeverything/theme": "npm:^1.1.23"
+    lit: "npm:^3.2.0"
+  languageName: unknown
+  linkType: soft
+
 "@blocksuite/affine-block-callout@workspace:*, @blocksuite/affine-block-callout@workspace:blocksuite/affine/blocks/callout":
   version: 0.0.0-use.local
   resolution: "@blocksuite/affine-block-callout@workspace:blocksuite/affine/blocks/callout"
@@ -3222,6 +3246,7 @@ __metadata:
   dependencies:
     "@blocksuite/affine-block-attachment": "workspace:*"
     "@blocksuite/affine-block-bookmark": "workspace:*"
+    "@blocksuite/affine-block-button": "workspace:*"
     "@blocksuite/affine-block-callout": "workspace:*"
     "@blocksuite/affine-block-code": "workspace:*"
     "@blocksuite/affine-block-data-view": "workspace:*"
