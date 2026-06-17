@@ -1,4 +1,7 @@
-import { DatabaseBlockDataSource } from '@blocksuite/affine-block-database';
+import {
+  DatabaseBlockDataSource,
+  EditorHostKey,
+} from '@blocksuite/affine-block-database';
 import type { ButtonSourceContext } from '@blocksuite/affine-model';
 import { createIdentifier } from '@blocksuite/global/di';
 import type { BlockStdScope } from '@blocksuite/std';
@@ -68,7 +71,7 @@ export function createDefaultButtonAutomationProvider(): ButtonAutomationProvide
       );
       if (!database) return undefined;
       const dataSource = new DatabaseBlockDataSource(database, ds => {
-        ds.serviceSet('EditorHostKey' as never, host);
+        ds.serviceSet(EditorHostKey, host);
       });
       return {
         databaseDocId,

@@ -2,7 +2,7 @@ import {
   type FilterableListItem,
   showPopFilterableList,
 } from '@blocksuite/affine-components/filterable-list';
-import { ArrowDownIcon } from '@blocksuite/affine-components/icons';
+import { ArrowDownSmallIcon } from '@blocksuite/icons/lit';
 import { ShadowlessElement } from '@blocksuite/std';
 import { cssVarV2 } from '@toeverything/theme/v2';
 import { html } from 'lit';
@@ -114,7 +114,7 @@ export class ButtonDatabaseSelect extends ShadowlessElement {
       >
         <span>${label}</span>
         <span style=${triggerIconStyle}>
-          ${ArrowDownIcon({ width: '16px', height: '16px' })}
+          ${ArrowDownSmallIcon({ width: '16px', height: '16px' })}
         </span>
       </button>
     `;

@@ -1,5 +1,6 @@
 import {
   DatabaseBlockDataSource,
+  EditorHostKey,
   getSingleDocIdFromText,
 } from '@blocksuite/affine-block-database';
 import type { DatabaseBlockModel } from '@blocksuite/affine-model';
@@ -134,7 +135,7 @@ export function createDataSourceForDatabase(
   );
   if (!database) return undefined;
   return new DatabaseBlockDataSource(database, ds => {
-    ds.serviceSet('EditorHostKey' as never, host);
+    ds.serviceSet(EditorHostKey, host);
   });
 }
 
@@ -151,7 +152,7 @@ export function resolveRowForDocInWorkspace(
   );
   if (!database) return undefined;
   const dataSource = new DatabaseBlockDataSource(database, ds => {
-    ds.serviceSet('EditorHostKey' as never, host);
+    ds.serviceSet(EditorHostKey, host);
   });
   return {
     databaseDocId: found.databaseDocId,
