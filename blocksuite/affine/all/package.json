@@ -12,6 +12,7 @@
   "dependencies": {
     "@blocksuite/affine-block-attachment": "workspace:*",
     "@blocksuite/affine-block-bookmark": "workspace:*",
+    "@blocksuite/affine-block-button": "workspace:*",
     "@blocksuite/affine-block-callout": "workspace:*",
     "@blocksuite/affine-block-code": "workspace:*",
     "@blocksuite/affine-block-data-view": "workspace:*",
@@ -105,6 +106,9 @@
     "./blocks/bookmark": "./src/blocks/bookmark/index.ts",
     "./blocks/bookmark/store": "./src/blocks/bookmark/store.ts",
     "./blocks/bookmark/view": "./src/blocks/bookmark/view.ts",
+    "./blocks/button": "./src/blocks/button/index.ts",
+    "./blocks/button/store": "./src/blocks/button/store.ts",
+    "./blocks/button/view": "./src/blocks/button/view.ts",
     "./blocks/callout": "./src/blocks/callout/index.ts",
     "./blocks/callout/store": "./src/blocks/callout/store.ts",
     "./blocks/callout/view": "./src/blocks/callout/view.ts",

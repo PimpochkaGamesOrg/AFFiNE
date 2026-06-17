@@ -1,5 +1,6 @@
 import { AttachmentStoreExtension } from '@blocksuite/affine-block-attachment/store';
 import { BookmarkStoreExtension } from '@blocksuite/affine-block-bookmark/store';
+import { ButtonStoreExtension } from '@blocksuite/affine-block-button/store';
 import { CalloutStoreExtension } from '@blocksuite/affine-block-callout/store';
 import { CodeStoreExtension } from '@blocksuite/affine-block-code/store';
 import { DataViewStoreExtension } from '@blocksuite/affine-block-data-view/store';
@@ -38,6 +39,7 @@ export function getInternalStoreExtensions() {
     AttachmentStoreExtension,
     BookmarkStoreExtension,
     CalloutStoreExtension,
+    ButtonStoreExtension,
     CodeStoreExtension,
     DataViewStoreExtension,
     DatabaseStoreExtension,

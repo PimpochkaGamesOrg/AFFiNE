@@ -11,4 +11,5 @@ export * from './properties/rich-text/cell-renderer';
 export * from './selection.js';
 export * from './service';
 export * from './utils/block-utils';
+export * from './utils/title-doc';
 export * from '@blocksuite/data-view';
