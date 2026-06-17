@@ -1,5 +1,5 @@
 import {
-  DatabaseBlockDataSource,
+  type DatabaseBlockDataSource,
   getSingleDocIdFromText,
 } from '@blocksuite/affine-block-database';
 import type {
@@ -13,11 +13,11 @@ import type { EditorHost } from '@blocksuite/std';
 import type { BaseTextAttributes, Text } from '@blocksuite/store';
 import { Text as YText } from '@blocksuite/store';
 
-import { normalizeExpression, parseFormula } from './formula/index.js';
 import {
   createDataSourceForDatabase,
   resolveRowForDocInWorkspace,
 } from './database-utils.js';
+import { normalizeExpression, parseFormula } from './formula/index.js';
 import type {
   AutomationRuntimeContext,
   ButtonAutomationContextProvider,
@@ -592,8 +592,6 @@ function clearCellValue(
       dataSource.cellValueChange(rowId, propertyId, false);
       return;
     case 'number':
-      dataSource.cellValueChange(rowId, propertyId, null);
-      return;
     case 'select':
     case 'multi-select':
       dataSource.cellValueChange(rowId, propertyId, null);

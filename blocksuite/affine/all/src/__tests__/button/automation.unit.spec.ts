@@ -14,8 +14,8 @@ import type { AffineTextAttributes } from '@blocksuite/affine-shared/types';
 import type { BaseTextAttributes } from '@blocksuite/store';
 import { Text } from '@blocksuite/store';
 import {
-  TestWorkspace,
   createAutoIncrementIdGenerator,
+  TestWorkspace,
 } from '@blocksuite/store/test';
 import { describe, expect, test } from 'vitest';
 
