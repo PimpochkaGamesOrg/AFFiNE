@@ -154,4 +154,12 @@ describe('button automation formula parser', () => {
       name: 'Status',
     });
   });
+
+  test('parses concat of this page and name', () => {
+    const parsed = parseFormula('This page + This page.Name');
+    expect(parsed).toEqual({
+      type: 'concat',
+      parts: [{ type: 'this_page' }, { type: 'property', name: 'Name' }],
+    });
+  });
 });

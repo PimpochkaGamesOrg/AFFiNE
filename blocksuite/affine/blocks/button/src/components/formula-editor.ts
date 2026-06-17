@@ -7,12 +7,20 @@ import { repeat } from 'lit/directives/repeat.js';
 
 import {
   analyzeFormula,
+  appendExpression,
   expressionToDisplay,
   expressionToTokens,
   type FormulaToken,
   type FormulaWarning,
+  normalizeExpression,
   parseFormula,
 } from '../automation/formula/index.js';
+
+const SNIPPET_EXPRESSIONS: Record<string, ButtonValueExpression> = {
+  'This page': { type: 'this_page' },
+  'This page.Name': { type: 'property', name: 'Name' },
+  '🗓️ Date triggered': { type: 'date_triggered' },
+};
 
 const editorBoxStyle = `
   min-height: 44px;
@@ -105,7 +113,19 @@ export class ButtonFormulaEditor extends ShadowlessElement {
   private accessor _draft = '';
 
   private get warnings(): FormulaWarning[] {
-    return analyzeFormula(this.value);
+    const warnings = analyzeFormula(this.value);
+    const normalized = normalizeExpression(this.value);
+    if (normalized.type === 'formula') {
+      return [
+        {
+          message:
+            'Formula is not recognized. Use the + buttons below or edit the text.',
+          severity: 'error',
+        },
+        ...warnings,
+      ];
+    }
+    return warnings;
   }
 
   private get tokens(): FormulaToken[] {
@@ -119,18 +139,18 @@ export class ButtonFormulaEditor extends ShadowlessElement {
 
   private _commitEdit() {
     this._editing = false;
-    const parsed = parseFormula(this._draft);
+    const parsed = normalizeExpression(parseFormula(this._draft));
     this.onChange(parsed);
   }
 
   private _insertSnippet(snippet: string) {
-    const current = this._editing
-      ? this._draft
-      : expressionToDisplay(this.value);
-    const next = current.trim() ? `${current} + ${snippet}` : snippet;
-    this._draft = next;
-    this._editing = true;
-    this.onChange(parseFormula(next));
+    const addition =
+      SNIPPET_EXPRESSIONS[snippet] ??
+      normalizeExpression(parseFormula(snippet));
+    const next = appendExpression(this.value, addition);
+    this._editing = false;
+    this._draft = expressionToDisplay(next);
+    this.onChange(next);
   }
 
   private _renderToken(token: FormulaToken) {

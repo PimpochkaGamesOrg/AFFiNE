@@ -315,12 +315,77 @@ function parseExpr(
   return first;
 }
 
+function parseFormulaPart(source: string): ButtonValueExpression {
+  const trimmed = trim(source);
+  if (!trimmed) return { type: 'literal', value: '' };
+  if (trimmed === 'This page') return { type: 'this_page' };
+
+  const parsed = parseExpr(trimmed, 0);
+  if (!parsed) return { type: 'formula', source: trimmed };
+  const rest = trim(trimmed.slice(parsed.next));
+  if (rest.length > 0) return { type: 'formula', source: trimmed };
+  return parsed.expr;
+}
+
+function parseTopLevelConcat(source: string): ButtonValueExpression | null {
+  const parts: ButtonValueExpression[] = [];
+  let current = '';
+  let quote: '"' | "'" | null = null;
+  let escaped = false;
+
+  for (const ch of source) {
+    if (quote) {
+      current += ch;
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (ch === '\\') {
+        escaped = true;
+        continue;
+      }
+      if (ch === quote) {
+        quote = null;
+      }
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      current += ch;
+      continue;
+    }
+    if (ch === '+') {
+      const segment = trim(current);
+      if (!segment) return null;
+      const parsed = parseFormulaPart(segment);
+      if (parsed.type === 'formula') return null;
+      parts.push(parsed);
+      current = '';
+      continue;
+    }
+    current += ch;
+  }
+
+  const tail = trim(current);
+  if (!tail) return null;
+  const parsed = parseFormulaPart(tail);
+  if (parsed.type === 'formula') return null;
+  parts.push(parsed);
+  if (parts.length < 2) return null;
+  return { type: 'concat', parts };
+}
+
 export function parseFormula(source: string): ButtonValueExpression {
   const trimmed = trim(source);
   if (!trimmed) return { type: 'literal', value: '' };
 
   if (trimmed === 'This page') {
     return { type: 'this_page' };
+  }
+
+  if (trimmed.includes('+')) {
+    const concatParsed = parseTopLevelConcat(trimmed);
+    if (concatParsed) return concatParsed;
   }
 
   const parsed = parseExpr(trimmed, 0);
@@ -371,6 +436,20 @@ export function isEmptyExpression(expr: ButtonValueExpression): boolean {
     default:
       return false;
   }
+}
+
+export function appendExpression(
+  current: ButtonValueExpression,
+  addition: ButtonValueExpression
+): ButtonValueExpression {
+  const base = normalizeExpression(current);
+  const add = normalizeExpression(addition);
+  if (isEmptyExpression(base)) return add;
+  if (isEmptyExpression(add)) return base;
+  if (base.type === 'concat') {
+    return { type: 'concat', parts: [...base.parts, add] };
+  }
+  return { type: 'concat', parts: [base, add] };
 }
 
 export function analyzeFormula(expr: ButtonValueExpression): FormulaWarning[] {
@@ -532,8 +611,13 @@ export function expressionToTokens(
           args: [expressionToTokens(normalized.value)],
         },
       ];
-    case 'formula':
+    case 'formula': {
+      const normalized = normalizeExpression(expr);
+      if (normalized.type !== 'formula') {
+        return expressionToTokens(normalized);
+      }
       return [{ kind: 'text', value: normalized.source }];
+    }
     default:
       return [];
   }
