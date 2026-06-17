@@ -1,7 +1,7 @@
 import type { DocCustomPropertyInfo } from '@affine/core/modules/db';
+import { findSourceRowForDocInDatabase } from '@blocksuite/affine/blocks/button';
 import type { ButtonAutomationConfig } from '@blocksuite/affine/model';
 import { defaultButtonAutomation } from '@blocksuite/affine/model';
-import { findSourceRowForDocInDatabase } from '@blocksuite/affine/blocks/button';
 import type { Workspace } from '@blocksuite/store';
 
 export type ButtonPropertyAdditionalData = {

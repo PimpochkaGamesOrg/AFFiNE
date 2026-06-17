@@ -1,8 +1,8 @@
 import { PropertyValue } from '@affine/component';
 import { DocService } from '@affine/core/modules/doc';
 import { EditorService } from '@affine/core/modules/editor';
-import { WorkspacePropertyService } from '@affine/core/modules/workspace-property';
 import { WorkspaceService } from '@affine/core/modules/workspace';
+import { WorkspacePropertyService } from '@affine/core/modules/workspace-property';
 import {
   effects as registerButtonEffects,
   executeButtonAutomationConfig,

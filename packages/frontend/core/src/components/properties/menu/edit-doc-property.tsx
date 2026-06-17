@@ -5,8 +5,8 @@ import {
   useConfirmModal,
 } from '@affine/component';
 import type { DocCustomPropertyInfo } from '@affine/core/modules/db';
-import { WorkspacePropertyService } from '@affine/core/modules/workspace-property';
 import { WorkspaceService } from '@affine/core/modules/workspace';
+import { WorkspacePropertyService } from '@affine/core/modules/workspace-property';
 import { Trans, useI18n } from '@affine/i18n';
 import {
   effects as registerButtonEffects,
