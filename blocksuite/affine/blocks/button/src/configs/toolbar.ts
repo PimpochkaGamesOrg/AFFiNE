@@ -9,6 +9,7 @@ import { DeleteIcon, SettingsIcon } from '@blocksuite/icons/lit';
 import { BlockFlavourIdentifier } from '@blocksuite/std';
 import type { ExtensionType } from '@blocksuite/store';
 
+import { ButtonBlockComponent } from '../button-block.js';
 import { openButtonConfigPanel } from '../components/button-config-panel.js';
 
 const configureAction = {

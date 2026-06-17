@@ -78,9 +78,7 @@ export function createRuntimeContext(input: {
   source: ButtonSourceContext;
   triggeredAt?: Date;
 }): AutomationRuntimeContext {
-  const databaseBlock = input.host.store.doc.getBlock(
-    input.source.databaseBlockId
-  );
+  const databaseBlock = input.host.store.getBlock(input.source.databaseBlockId);
   if (!databaseBlock || databaseBlock.flavour !== 'affine:database') {
     throw new Error('Source database not found');
   }
@@ -469,7 +467,7 @@ export function setRowTitleFromEvaluated(
   const text = model.text as Text;
   text.clear();
   if (value.kind === 'linked_doc') {
-    text.insert(0, REFERENCE_NODE, {
+    text.insert(REFERENCE_NODE, 0, {
       reference: {
         type: 'LinkedPage',
         pageId: value.docId,
@@ -484,7 +482,7 @@ export function setRowTitleFromEvaluated(
   }
   const plain = textFromEvaluated(value);
   if (plain) {
-    text.insert(0, plain);
+    text.insert(plain, 0);
   }
 }
 
@@ -506,8 +504,8 @@ export function setCellFromEvaluated(
   if (value.kind === 'linked_docs') {
     const text = new YText();
     value.docIds.forEach((docId, index) => {
-      if (index > 0) text.insert(text.length, ' ');
-      text.insert(text.length, REFERENCE_NODE, {
+      if (index > 0) text.insert(' ', text.length);
+      text.insert(REFERENCE_NODE, text.length, {
         reference: { type: 'LinkedPage', pageId: docId },
       } satisfies AffineTextAttributes as BaseTextAttributes);
     });
@@ -522,7 +520,7 @@ export function setCellFromEvaluated(
       return;
     }
     const text = new YText();
-    text.insert(0, REFERENCE_NODE, {
+    text.insert(REFERENCE_NODE, 0, {
       reference: { type: 'LinkedPage', pageId: value.docId },
     } satisfies AffineTextAttributes as BaseTextAttributes);
     dataSource.cellValueChange(rowId, propertyId, text);
