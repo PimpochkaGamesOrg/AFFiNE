@@ -1,4 +1,5 @@
 import { CaptionedBlockComponent } from '@blocksuite/affine-components/caption';
+import { toast } from '@blocksuite/affine-components/toast';
 import type { ButtonBlockModel } from '@blocksuite/affine-model';
 import { SettingsIcon } from '@blocksuite/icons/lit';
 import { html, nothing } from 'lit';
@@ -17,6 +18,15 @@ import { getButtonAutomationProvider } from './services/button-automation-provid
 export class ButtonBlockComponent extends CaptionedBlockComponent<ButtonBlockModel> {
   private _running = false;
 
+  private _notify(title: string) {
+    const provider = getButtonAutomationProvider(this.std);
+    if (provider?.notify) {
+      provider.notify({ title });
+      return;
+    }
+    toast(this.host, title);
+  }
+
   override connectedCallback() {
     super.connectedCallback();
     this.classList.add(buttonBlockStyles);
@@ -27,8 +37,21 @@ export class ButtonBlockComponent extends CaptionedBlockComponent<ButtonBlockMod
     e.stopPropagation();
     if (this._running || this.store.readonly) return;
 
+    const { automation } = this.model.props;
     const provider = getButtonAutomationProvider(this.std);
-    if (!provider) return;
+    if (!provider) {
+      this._notify('Automation service is unavailable');
+      return;
+    }
+
+    if (!automation.sourceDatabase?.databaseDocId) {
+      this._notify('Select a source database in button settings first');
+      return;
+    }
+    if (automation.actions.length === 0) {
+      this._notify('Add at least one action in button settings');
+      return;
+    }
 
     this._running = true;
     try {
@@ -37,11 +60,16 @@ export class ButtonBlockComponent extends CaptionedBlockComponent<ButtonBlockMod
         this.host,
         provider
       );
-      if (!result.ok && result.reason !== 'cancelled' && result.message) {
-        provider.notify?.({
-          title: result.message,
-          accent: 'warning',
-        });
+      if (result.ok) {
+        this._notify(`«${automation.label || 'Button'}» completed`);
+        return;
+      }
+      if (result.reason === 'cancelled') {
+        this._notify('Automation cancelled');
+        return;
+      }
+      if (result.message) {
+        this._notify(result.message);
       }
     } finally {
       this._running = false;

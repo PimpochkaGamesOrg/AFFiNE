@@ -8,7 +8,7 @@ import {
   findDatabaseInWorkspace,
   findSourceRowForDoc,
   listWorkspaceDatabases,
-} from '../automation/executor.js';
+} from '../automation/database-utils.js';
 import type {
   ButtonAutomationContextProvider,
   DatabaseTarget,
@@ -47,10 +47,11 @@ export function createDefaultButtonAutomationProvider(): ButtonAutomationProvide
           storedSource.databaseDocId,
           storedSource.databaseBlockId
         );
-        if (!database) return storedSource;
-        const dataSource = new DatabaseBlockDataSource(database);
-        if (dataSource.rows$.value.includes(storedSource.rowId)) {
-          return storedSource;
+        if (database) {
+          const dataSource = new DatabaseBlockDataSource(database);
+          if (dataSource.rows$.value.includes(storedSource.rowId)) {
+            return storedSource;
+          }
         }
       }
       return findSourceRowForDoc(

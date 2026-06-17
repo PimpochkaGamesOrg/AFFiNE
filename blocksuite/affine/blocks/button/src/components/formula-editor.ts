@@ -227,9 +227,7 @@ export class ButtonFormulaEditor extends ShadowlessElement {
                 style=${insertBtnStyle}
                 @click=${(e: Event) => {
                   e.stopPropagation();
-                  this._insertSnippet(
-                    `Page added in step ${Math.min(2, this.stepCount)}`
-                  );
+                  this._insertSnippet(`Page added in step ${this.stepCount}`);
                 }}
               >
                 + Step page

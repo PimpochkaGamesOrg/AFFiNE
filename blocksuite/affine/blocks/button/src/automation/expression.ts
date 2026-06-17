@@ -14,6 +14,10 @@ import type { BaseTextAttributes, Text } from '@blocksuite/store';
 import { Text as YText } from '@blocksuite/store';
 
 import { normalizeExpression, parseFormula } from './formula/index.js';
+import {
+  createDataSourceForDatabase,
+  resolveRowForDocInWorkspace,
+} from './database-utils.js';
 import type {
   AutomationRuntimeContext,
   ButtonAutomationContextProvider,
@@ -83,14 +87,19 @@ export function createRuntimeContext(input: {
   source: ButtonSourceContext;
   triggeredAt?: Date;
 }): AutomationRuntimeContext {
-  const databaseBlock = input.host.store.getBlock(input.source.databaseBlockId);
-  if (!databaseBlock || databaseBlock.flavour !== 'affine:database') {
-    throw new Error('Source database not found');
+  const sourceDataSource = createDataSourceForDatabase(
+    input.host,
+    input.source.databaseDocId,
+    input.source.databaseBlockId
+  );
+  if (!sourceDataSource) {
+    throw new Error(
+      `Source database not found (${input.source.databaseDocId}:${input.source.databaseBlockId})`
+    );
   }
-  const sourceDatabase = databaseBlock.model as DatabaseBlockModel;
-  const sourceDataSource = new DatabaseBlockDataSource(sourceDatabase, ds => {
-    ds.serviceSet('EditorHostKey' as never, input.host);
-  });
+  const sourceDatabase = sourceDataSource.doc.getBlock(
+    input.source.databaseBlockId
+  )?.model as DatabaseBlockModel;
   return {
     host: input.host,
     source: input.source,
@@ -184,10 +193,13 @@ export function evaluateExpression(
       if (result.docId) {
         return { kind: 'linked_doc', docId: result.docId };
       }
-      const docId = resolver.getRowLinkedDocId(
-        result.rowId,
-        ctx.sourceDataSource
+      const dataSource = createDataSourceForDatabase(
+        ctx.host,
+        result.databaseDocId,
+        result.databaseBlockId
       );
+      if (!dataSource) return { kind: 'empty' };
+      const docId = resolver.getRowLinkedDocId(result.rowId, dataSource);
       if (docId) return { kind: 'linked_doc', docId };
       return { kind: 'empty' };
     }
@@ -428,37 +440,7 @@ function resolveDatabaseForDoc(
   ctx: AutomationRuntimeContext,
   docId: string
 ): (DatabaseTarget & { rowId?: string }) | undefined {
-  const workspace = ctx.host.store.workspace;
-  const databaseDoc = workspace.getDoc(ctx.source.databaseDocId);
-  if (!databaseDoc) return undefined;
-  const store = databaseDoc.getStore({ id: ctx.source.databaseDocId });
-  if (!store.ready) store.load();
-  const databaseBlock = store.getBlock(ctx.source.databaseBlockId);
-  if (!databaseBlock || databaseBlock.flavour !== 'affine:database') {
-    return undefined;
-  }
-  const database = databaseBlock.model as DatabaseBlockModel;
-  const dataSource = new DatabaseBlockDataSource(database);
-  for (const rowId of dataSource.rows$.value) {
-    const linked = getSingleDocIdFromText(
-      dataSource.doc.getBlock(rowId)?.model?.text
-    );
-    if (linked === docId) {
-      return {
-        databaseDocId: ctx.source.databaseDocId,
-        databaseBlockId: ctx.source.databaseBlockId,
-        dataSource,
-        database,
-        rowId,
-      };
-    }
-  }
-  return {
-    databaseDocId: ctx.source.databaseDocId,
-    databaseBlockId: ctx.source.databaseBlockId,
-    dataSource,
-    database,
-  };
+  return resolveRowForDocInWorkspace(ctx.host, docId);
 }
 
 export function setRowTitleFromEvaluated(
@@ -505,6 +487,18 @@ export function setCellFromEvaluated(
   }
   const propertyType = dataSource.propertyTypeGet(propertyId);
   if (!propertyType) return;
+
+  if (value.kind === 'empty') {
+    clearCellValue(rowId, propertyId, propertyType, dataSource);
+    return;
+  }
+
+  if (value.kind === 'boolean') {
+    if (propertyType === 'checkbox') {
+      dataSource.cellValueChange(rowId, propertyId, value.value);
+    }
+    return;
+  }
 
   if (value.kind === 'linked_docs') {
     const text = new YText();
@@ -562,12 +556,56 @@ export function setCellFromEvaluated(
       }
       return;
     }
+    if (propertyType === 'checkbox') {
+      const normalized = value.value.trim().toLowerCase();
+      dataSource.cellValueChange(
+        rowId,
+        propertyId,
+        ['true', 'yes', '1'].includes(normalized)
+      );
+      return;
+    }
+    if (propertyType === 'number') {
+      const parsed = Number(value.value);
+      if (!Number.isNaN(parsed)) {
+        dataSource.cellValueChange(rowId, propertyId, parsed);
+      }
+      return;
+    }
     if (propertyType === 'link') {
       dataSource.cellValueChange(rowId, propertyId, value.value);
       return;
     }
     dataSource.cellValueChange(rowId, propertyId, new YText(value.value));
     return;
+  }
+}
+
+function clearCellValue(
+  rowId: string,
+  propertyId: string,
+  propertyType: string,
+  dataSource: DatabaseBlockDataSource
+) {
+  switch (propertyType) {
+    case 'checkbox':
+      dataSource.cellValueChange(rowId, propertyId, false);
+      return;
+    case 'number':
+      dataSource.cellValueChange(rowId, propertyId, null);
+      return;
+    case 'select':
+    case 'multi-select':
+      dataSource.cellValueChange(rowId, propertyId, null);
+      return;
+    case 'date':
+      dataSource.cellValueChange(rowId, propertyId, { start: null, end: null });
+      return;
+    case 'link':
+      dataSource.cellValueChange(rowId, propertyId, '');
+      return;
+    default:
+      dataSource.cellValueChange(rowId, propertyId, new YText());
   }
 }
 

@@ -5,7 +5,7 @@ import type {
   ButtonEditAction,
 } from '@blocksuite/affine-model';
 
-import { listWorkspaceDatabases } from './executor.js';
+import { listWorkspaceDatabases } from './database-utils.js';
 
 export type WorkspaceDatabase = {
   databaseDocId: string;

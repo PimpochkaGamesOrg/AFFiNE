@@ -12,7 +12,13 @@ import {
 import type { ButtonAutomationConfig } from '@blocksuite/affine/model';
 import { SettingsIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
-import { type MouseEvent, useCallback, useRef, useState } from 'react';
+import {
+  type MouseEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import { useGuard } from '../guard';
 import type { PropertyValueProps } from '../properties/types';
@@ -27,6 +33,13 @@ import {
 
 function ensureButtonEffects() {
   registerButtonEffects();
+}
+
+function formatAutomationError(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return 'Automation failed unexpectedly';
 }
 
 export const ButtonValue = ({ propertyInfo, readonly }: PropertyValueProps) => {
@@ -53,9 +66,13 @@ export const ButtonValue = ({ propertyInfo, readonly }: PropertyValueProps) => {
   );
   const disabled = running;
 
+  useEffect(() => {
+    ensureButtonEffects();
+  }, []);
+
   const persistAutomation = useCallback(
-    (config: ButtonAutomationConfig) => {
-      if (!propertyInfo?.id) return;
+    (config: ButtonAutomationConfig): boolean => {
+      if (!propertyInfo?.id) return false;
       if (
         config.sourceDatabase &&
         isSourceDatabaseUsedByAnotherButtonProperty(
@@ -64,11 +81,16 @@ export const ButtonValue = ({ propertyInfo, readonly }: PropertyValueProps) => {
           config.sourceDatabase
         )
       ) {
-        return;
+        notify.warning({
+          title:
+            'This database is already used by another button property in the workspace',
+        });
+        return false;
       }
       workspacePropertyService.updatePropertyInfo(propertyInfo.id, {
         additionalData: buildButtonPropertyAdditionalData(config),
       });
+      return true;
     },
     [propertyInfo, workspaceProperties, workspacePropertyService]
   );
@@ -78,7 +100,6 @@ export const ButtonValue = ({ propertyInfo, readonly }: PropertyValueProps) => {
       event.preventDefault();
       event.stopPropagation();
       if (!canConfigure || !containerRef.current) return;
-      ensureButtonEffects();
       openButtonAutomationConfigPanel({
         anchor: containerRef.current,
         workspace: workspaceService.workspace.docCollection,
@@ -139,8 +160,8 @@ export const ButtonValue = ({ propertyInfo, readonly }: PropertyValueProps) => {
             title: result.message ?? 'Automation failed',
           });
         })
-        .catch(() => {
-          notify.error({ title: 'Automation failed unexpectedly' });
+        .catch((error: unknown) => {
+          notify.error({ title: formatAutomationError(error) });
         })
         .finally(() => {
           setRunning(false);

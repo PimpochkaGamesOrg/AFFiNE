@@ -27,6 +27,8 @@ import {
   getWorkspaceDatabases,
   type WorkspaceDatabase,
 } from '../automation/config-helpers.js';
+import { ButtonDatabaseSelect } from './database-select.js';
+import { ButtonFormulaEditor } from './formula-editor.js';
 
 const panelStyle = `
   width: 520px;
@@ -189,10 +191,16 @@ export class ButtonConfigPanel extends ShadowlessElement {
   private _ensureRowCache() {
     this.draft.actions.forEach((action, index) => {
       if (action.type === 'add_page' && !this._propertyRows.has(index)) {
-        this._propertyRows.set(index, rowsFromProperties(action.properties));
+        this._propertyRows = new Map(this._propertyRows).set(
+          index,
+          rowsFromProperties(action.properties)
+        );
       }
       if (action.type === 'edit' && !this._editRows.has(index)) {
-        this._editRows.set(index, rowsFromProperties(action.properties));
+        this._editRows = new Map(this._editRows).set(
+          index,
+          rowsFromProperties(action.properties)
+        );
       }
     });
   }
@@ -225,18 +233,28 @@ export class ButtonConfigPanel extends ShadowlessElement {
       if (type === 'add_page') {
         const action = createEmptyAddPageAction(this.databases[0]);
         draft.actions.push(action);
-        this._propertyRows.set(index, rowsFromProperties(action.properties));
+        this._propertyRows = new Map(this._propertyRows).set(
+          index,
+          rowsFromProperties(action.properties)
+        );
         return;
       }
       const editAction = createEmptyEditAction();
       draft.actions.push(editAction);
-      this._editRows.set(index, rowsFromProperties(editAction.properties));
+      this._editRows = new Map(this._editRows).set(
+        index,
+        rowsFromProperties(editAction.properties)
+      );
     });
   }
 
   private _removeAction(index: number) {
-    this._propertyRows.delete(index);
-    this._editRows.delete(index);
+    const nextPropertyRows = new Map(this._propertyRows);
+    nextPropertyRows.delete(index);
+    this._propertyRows = nextPropertyRows;
+    const nextEditRows = new Map(this._editRows);
+    nextEditRows.delete(index);
+    this._editRows = nextEditRows;
     this._updateDraft(draft => {
       draft.actions.splice(index, 1);
     });
@@ -244,14 +262,20 @@ export class ButtonConfigPanel extends ShadowlessElement {
 
   private _getPropertyRows(index: number, action: ButtonAddPageAction) {
     if (!this._propertyRows.has(index)) {
-      this._propertyRows.set(index, rowsFromProperties(action.properties));
+      this._propertyRows = new Map(this._propertyRows).set(
+        index,
+        rowsFromProperties(action.properties)
+      );
     }
     return this._propertyRows.get(index)!;
   }
 
   private _getEditRows(index: number, action: ButtonEditAction) {
     if (!this._editRows.has(index)) {
-      this._editRows.set(index, rowsFromProperties(action.properties));
+      this._editRows = new Map(this._editRows).set(
+        index,
+        rowsFromProperties(action.properties)
+      );
     }
     return this._editRows.get(index)!;
   }
@@ -264,7 +288,7 @@ export class ButtonConfigPanel extends ShadowlessElement {
   }
 
   private _syncPropertyRows(index: number, rows: PropertyRow[]) {
-    this._propertyRows.set(index, rows);
+    this._propertyRows = new Map(this._propertyRows).set(index, rows);
     const nextProperties = propertiesFromRows(rows);
     const action = this.draft.actions[index];
     if (action?.type !== 'add_page') return;
@@ -275,7 +299,7 @@ export class ButtonConfigPanel extends ShadowlessElement {
   }
 
   private _syncEditRows(index: number, rows: PropertyRow[]) {
-    this._editRows.set(index, rows);
+    this._editRows = new Map(this._editRows).set(index, rows);
     const nextProperties = propertiesFromRows(rows);
     const action = this.draft.actions[index];
     if (action?.type !== 'edit') return;
@@ -293,15 +317,11 @@ export class ButtonConfigPanel extends ShadowlessElement {
     return html`
       <div style="margin-bottom: 16px;">
         <div style=${labelStyle}>Source database</div>
-        <select
-          style=${inputStyle}
-          .value=${selectedKey}
-          @change=${(e: Event) => {
-            const value = (e.target as HTMLSelectElement).value;
-            const db = this.databases.find(
-              item => `${item.databaseDocId}:${item.databaseBlockId}` === value
-            );
-            if (!db) return;
+        <affine-button-database-select
+          .databases=${this.databases}
+          .selectedKey=${selectedKey}
+          placeholder="Select source database"
+          .onSelect=${(db: WorkspaceDatabase) => {
             this._updateDraft(d => {
               d.sourceDatabase = {
                 databaseDocId: db.databaseDocId,
@@ -311,24 +331,7 @@ export class ButtonConfigPanel extends ShadowlessElement {
               d.source = undefined;
             });
           }}
-        >
-          <option value="" disabled ?selected=${!selectedKey}>
-            Select source database
-          </option>
-          ${repeat(
-            this.databases,
-            db => `${db.databaseDocId}:${db.databaseBlockId}`,
-            db => html`
-              <option
-                value="${db.databaseDocId}:${db.databaseBlockId}"
-                ?selected=${selectedKey ===
-                `${db.databaseDocId}:${db.databaseBlockId}`}
-              >
-                ${db.name || 'Untitled database'}
-              </option>
-            `
-          )}
-        </select>
+        ></affine-button-database-select>
         <div style="opacity:0.55;font-size:11px;margin-top:4px;">
           This button is shown only on pages linked from the selected database.
         </div>
@@ -337,19 +340,18 @@ export class ButtonConfigPanel extends ShadowlessElement {
   }
 
   private _renderDatabaseSelect(action: ButtonAddPageAction, index: number) {
-    const selectedKey = `${action.databaseDocId}:${action.databaseBlockId}`;
+    const selectedKey =
+      action.databaseDocId && action.databaseBlockId
+        ? `${action.databaseDocId}:${action.databaseBlockId}`
+        : '';
     return html`
       <div style="margin-bottom: 12px;">
         <div style=${actionTagStyle}>Add page to</div>
-        <select
-          style=${inputStyle}
-          .value=${selectedKey}
-          @change=${(e: Event) => {
-            const value = (e.target as HTMLSelectElement).value;
-            const db = this.databases.find(
-              item => `${item.databaseDocId}:${item.databaseBlockId}` === value
-            );
-            if (!db) return;
+        <affine-button-database-select
+          .databases=${this.databases}
+          .selectedKey=${selectedKey}
+          placeholder="Select database"
+          .onSelect=${(db: WorkspaceDatabase) => {
             this._updateAction(index, act => {
               const add = act as ButtonAddPageAction;
               add.databaseDocId = db.databaseDocId;
@@ -357,24 +359,7 @@ export class ButtonConfigPanel extends ShadowlessElement {
               add.databaseName = db.name;
             });
           }}
-        >
-          <option value="" disabled ?selected=${!action.databaseDocId}>
-            Select database
-          </option>
-          ${repeat(
-            this.databases,
-            db => `${db.databaseDocId}:${db.databaseBlockId}`,
-            db => html`
-              <option
-                value="${db.databaseDocId}:${db.databaseBlockId}"
-                ?selected=${selectedKey ===
-                `${db.databaseDocId}:${db.databaseBlockId}`}
-              >
-                ${db.name || 'Untitled database'}
-              </option>
-            `
-          )}
-        </select>
+        ></affine-button-database-select>
         <div style="opacity:0.55;font-size:11px;margin-top:4px;">as Empty</div>
       </div>
     `;
@@ -427,8 +412,11 @@ export class ButtonConfigPanel extends ShadowlessElement {
         `
       )}
       <button
+        type="button"
         style="${smallBtnStyle};display:inline-flex;align-items:center;gap:4px;"
-        @click=${() =>
+        @click=${(e: Event) => {
+          e.preventDefault();
+          e.stopPropagation();
           sync([
             ...rows,
             {
@@ -436,7 +424,8 @@ export class ButtonConfigPanel extends ShadowlessElement {
               name: '',
               value: { type: 'this_page' },
             },
-          ])}
+          ]);
+        }}
       >
         ${PlusIcon({ width: '14px', height: '14px' })} Edit property
       </button>
@@ -654,6 +643,21 @@ declare global {
   }
 }
 
+function definePanelElement(
+  name: string,
+  constructor: CustomElementConstructor
+) {
+  if (!customElements.get(name)) {
+    customElements.define(name, constructor);
+  }
+}
+
+function ensureConfigPanelElements() {
+  definePanelElement('affine-button-config-panel', ButtonConfigPanel);
+  definePanelElement('affine-button-database-select', ButtonDatabaseSelect);
+  definePanelElement('affine-button-formula-editor', ButtonFormulaEditor);
+}
+
 export function openButtonConfigPanel(
   model: ButtonBlockModel,
   anchor: HTMLElement,
@@ -671,8 +675,9 @@ export function openButtonAutomationConfigPanel(options: {
   anchor: HTMLElement;
   workspace: Workspace;
   config: ButtonAutomationConfig;
-  onSave: (config: ButtonAutomationConfig) => void;
+  onSave: (config: ButtonAutomationConfig) => boolean | void;
 }) {
+  ensureConfigPanelElements();
   const panel = document.createElement(
     'affine-button-config-panel'
   ) as ButtonConfigPanel;
@@ -687,7 +692,8 @@ export function openButtonAutomationConfigPanel(options: {
     }
   );
   panel.onSave = config => {
-    options.onSave(config);
+    const saved = options.onSave(config);
+    if (saved === false) return;
     closePopup();
   };
 }

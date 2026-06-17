@@ -2,6 +2,7 @@ import {
   Input,
   MenuItem,
   MenuSeparator,
+  notify,
   useConfirmModal,
 } from '@affine/component';
 import type { DocCustomPropertyInfo } from '@affine/core/modules/db';
@@ -164,11 +165,16 @@ export const EditWorkspacePropertyMenuItems = ({
               config.sourceDatabase
             )
           ) {
-            return;
+            notify.warning({
+              title:
+                'This database is already used by another button property in the workspace',
+            });
+            return false;
           }
           workspacePropertyService.updatePropertyInfo(propertyId, {
             additionalData: buildButtonPropertyAdditionalData(config),
           });
+          return true;
         },
       });
     },
