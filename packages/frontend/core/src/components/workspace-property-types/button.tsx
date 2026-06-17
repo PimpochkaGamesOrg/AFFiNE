@@ -3,7 +3,7 @@ import { EditorService } from '@affine/core/modules/editor';
 import { WorkspaceService } from '@affine/core/modules/workspace';
 import { WorkspacePropertyService } from '@affine/core/modules/workspace-property';
 import {
-  effects as buttonEffects,
+  effects as registerButtonEffects,
   executeButtonAutomationConfig,
   getButtonAutomationProvider,
   openButtonAutomationConfigPanel,
@@ -21,12 +21,8 @@ import {
   parseButtonPropertyData,
 } from './button-utils';
 
-let buttonEffectsRegistered = false;
-
 function ensureButtonEffects() {
-  if (buttonEffectsRegistered) return;
-  buttonEffects();
-  buttonEffectsRegistered = true;
+  registerButtonEffects();
 }
 
 function saveButtonPropertyData(

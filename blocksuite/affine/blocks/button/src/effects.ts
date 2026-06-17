@@ -3,11 +3,20 @@ import { ButtonConfigPanel } from './components/button-config-panel.js';
 import { ButtonConfirmDialog } from './components/confirm-dialog.js';
 import { ButtonFormulaEditor } from './components/formula-editor.js';
 
+function defineButtonElement(
+  name: string,
+  constructor: CustomElementConstructor
+) {
+  if (!customElements.get(name)) {
+    customElements.define(name, constructor);
+  }
+}
+
 export function effects() {
-  customElements.define('affine-button', ButtonBlockComponent);
-  customElements.define('affine-button-config-panel', ButtonConfigPanel);
-  customElements.define('affine-button-confirm-dialog', ButtonConfirmDialog);
-  customElements.define('affine-button-formula-editor', ButtonFormulaEditor);
+  defineButtonElement('affine-button', ButtonBlockComponent);
+  defineButtonElement('affine-button-config-panel', ButtonConfigPanel);
+  defineButtonElement('affine-button-confirm-dialog', ButtonConfirmDialog);
+  defineButtonElement('affine-button-formula-editor', ButtonFormulaEditor);
 }
 
 declare global {
