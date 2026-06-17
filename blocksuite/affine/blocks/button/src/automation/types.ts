@@ -1,9 +1,8 @@
+import type { DatabaseBlockDataSource } from '@blocksuite/affine-block-database';
 import type {
   ButtonSourceContext,
-  ButtonValueExpression,
+  DatabaseBlockModel,
 } from '@blocksuite/affine-model';
-import type { DatabaseBlockDataSource } from '@blocksuite/affine-block-database';
-import type { DatabaseBlockModel } from '@blocksuite/affine-model';
 import type { EditorHost } from '@blocksuite/std';
 import type { Text } from '@blocksuite/store';
 
@@ -87,7 +86,10 @@ export type PropertyResolver = {
     rowId: string,
     propertyId: string
   ) => unknown;
-  getRowTitleText: (rowId: string, dataSource: DatabaseBlockDataSource) => Text | undefined;
+  getRowTitleText: (
+    rowId: string,
+    dataSource: DatabaseBlockDataSource
+  ) => Text | undefined;
   getRowLinkedDocId: (
     rowId: string,
     dataSource: DatabaseBlockDataSource

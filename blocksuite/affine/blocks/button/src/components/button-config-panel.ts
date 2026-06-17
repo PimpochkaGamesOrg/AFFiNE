@@ -26,7 +26,6 @@ import {
   getWorkspaceDatabases,
   type WorkspaceDatabase,
 } from '../automation/config-helpers.js';
-import { expressionToDisplay } from '../automation/formula/index.js';
 
 const panelStyle = `
   width: 520px;
@@ -185,7 +184,10 @@ export class ButtonConfigPanel extends ShadowlessElement {
     this._ensureRowCache();
   }
 
-  private _updateAction(index: number, updater: (action: ButtonAction) => void) {
+  private _updateAction(
+    index: number,
+    updater: (action: ButtonAction) => void
+  ) {
     this._updateDraft(draft => {
       const action = draft.actions[index];
       if (!action) return;
@@ -359,9 +361,14 @@ export class ButtonConfigPanel extends ShadowlessElement {
         <div style=${headerRowStyle}>
           <div>
             <div style=${actionTagStyle}>Show confirmation</div>
-            <div style="font-size:13px;font-weight:600;">Confirmation message</div>
+            <div style="font-size:13px;font-weight:600;">
+              Confirmation message
+            </div>
           </div>
-          <button style=${smallBtnStyle} @click=${() => this._removeAction(index)}>
+          <button
+            style=${smallBtnStyle}
+            @click=${() => this._removeAction(index)}
+          >
             Remove
           </button>
         </div>
@@ -416,15 +423,21 @@ export class ButtonConfigPanel extends ShadowlessElement {
     return html`
       <div style=${actionCardStyle}>
         <div style=${headerRowStyle}>
-          <div style="font-size:13px;font-weight:600;">
-            Step ${index + 1}
-          </div>
-          <button style=${smallBtnStyle} @click=${() => this._removeAction(index)}>
+          <div style="font-size:13px;font-weight:600;">Step ${index + 1}</div>
+          <button
+            style=${smallBtnStyle}
+            @click=${() => this._removeAction(index)}
+          >
             Remove
           </button>
         </div>
         ${this._renderDatabaseSelect(action, index)}
-        ${this._renderPropertyRows(rows, index, r => this._syncPropertyRows(index, r), index)}
+        ${this._renderPropertyRows(
+          rows,
+          index,
+          r => this._syncPropertyRows(index, r),
+          index
+        )}
       </div>
     `;
   }
@@ -438,11 +451,19 @@ export class ButtonConfigPanel extends ShadowlessElement {
             <div style=${actionTagStyle}>Edit</div>
             <div style="font-size:13px;font-weight:600;">This page</div>
           </div>
-          <button style=${smallBtnStyle} @click=${() => this._removeAction(index)}>
+          <button
+            style=${smallBtnStyle}
+            @click=${() => this._removeAction(index)}
+          >
             Remove
           </button>
         </div>
-        ${this._renderPropertyRows(rows, index, r => this._syncEditRows(index, r), this.draft.actions.length)}
+        ${this._renderPropertyRows(
+          rows,
+          index,
+          r => this._syncEditRows(index, r),
+          this.draft.actions.length
+        )}
       </div>
     `;
   }
@@ -479,26 +500,31 @@ export class ButtonConfigPanel extends ShadowlessElement {
 
         <div style="${labelStyle};margin-bottom:8px;">Do</div>
 
-        ${repeat(draft.actions, (_, index) => index, (action, index) =>
-          this._renderAction(action, index)
+        ${repeat(
+          draft.actions,
+          (_, index) => index,
+          (action, index) => this._renderAction(action, index)
         )}
-
         ${draft.actions.length === 0
           ? html`<div style="opacity:0.55;font-size:12px;margin-bottom:12px;">
-              Add steps below. Pick any database and map properties with formulas.
+              Add steps below. Pick any database and map properties with
+              formulas.
             </div>`
           : nothing}
-
         ${!hasDatabases
           ? html`<div
-              style="opacity:0.7;font-size:12px;margin-bottom:12px;color:${cssVarV2.status.warning};"
+              style="opacity:0.7;font-size:12px;margin-bottom:12px;color:${cssVarV2
+                .status.warning};"
             >
               Create at least one database in workspace to use "Add page to".
             </div>`
           : nothing}
 
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
-          <button style=${smallBtnStyle} @click=${() => this._addAction('confirm')}>
+          <button
+            style=${smallBtnStyle}
+            @click=${() => this._addAction('confirm')}
+          >
             + Show confirmation
           </button>
           <button
@@ -508,7 +534,10 @@ export class ButtonConfigPanel extends ShadowlessElement {
           >
             + Add page to
           </button>
-          <button style=${smallBtnStyle} @click=${() => this._addAction('edit')}>
+          <button
+            style=${smallBtnStyle}
+            @click=${() => this._addAction('edit')}
+          >
             + Edit this page
           </button>
         </div>

@@ -34,8 +34,8 @@ import type { TableSingleView } from '../table-view-manager.js';
 import {
   getTableViewportStyle,
   renderTableViewportResizeHandle,
-  TableViewportResizeController,
   tableStickyColumnHeaderStyle,
+  TableViewportResizeController,
   tableViewportWrapperStyle,
 } from '../table-viewport.js';
 import { handleTableWheel } from '../utils.js';
@@ -314,7 +314,8 @@ export class TableViewUI extends DataViewUIBase<VirtualTableViewUILogic> {
       paddingLeft: `${vPadding}px`,
       paddingRight: `${vPadding}px`,
     });
-    const viewportHeight = this.logic.viewportResizeController.effectiveHeight$.value;
+    const viewportHeight =
+      this.logic.viewportResizeController.effectiveHeight$.value;
     const viewportStyle = getTableViewportStyle(viewportHeight);
     return html`
       ${renderUniLit(this.logic.root.config.headerWidget, {

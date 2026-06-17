@@ -1,27 +1,15 @@
-import {
-  Button,
-  Input,
-  Loading,
-  Modal,
-  notify,
-} from '@affine/component';
+import { Button, Input, Loading, Modal, notify } from '@affine/component';
 import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
+import { WorkspaceServerService } from '@affine/core/modules/cloud';
 import {
   type DialogComponentProps,
   type WORKSPACE_DIALOG_SCHEMA,
 } from '@affine/core/modules/dialogs';
 import { IntegrationService } from '@affine/core/modules/integration';
 import { NotionApiClient } from '@affine/core/modules/integration/notion/notion-api';
-import { WorkspaceServerService } from '@affine/core/modules/cloud';
 import { useI18n } from '@affine/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export const NotionSyncDialog = ({
   close,
@@ -36,7 +24,9 @@ export const NotionSyncDialog = ({
   const progress = useLiveData(notion.progress$);
 
   const [token, setToken] = useState(settings?.token ?? '');
-  const [databaseId, setDatabaseId] = useState(settings?.notionDatabaseId ?? '');
+  const [databaseId, setDatabaseId] = useState(
+    settings?.notionDatabaseId ?? ''
+  );
   const [stage, setStage] = useState<'setup' | 'syncing'>('setup');
   const [verifying, setVerifying] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
@@ -58,7 +48,7 @@ export const NotionSyncDialog = ({
     close();
   }, [close, syncing]);
 
-  const handleVerifyAndSave = useAsyncCallback(async () => {
+  const verifyAndSave = useCallback(async () => {
     if (!token.trim() || !databaseId.trim()) {
       notify.error({
         title: t['com.affine.integration.notion.sync.missing-fields'](),
@@ -85,9 +75,11 @@ export const NotionSyncDialog = ({
     }
   }, [apiBaseUrl, databaseBlockId, databaseId, notion, t, token]);
 
+  const handleVerifyAndSave = useAsyncCallback(verifyAndSave, [verifyAndSave]);
+
   const handleStartSync = useAsyncCallback(async () => {
     if (!settings?.token || !settings.notionDatabaseId) {
-      await handleVerifyAndSave();
+      await verifyAndSave();
       if (!notion.settings$(databaseBlockId).value?.token) {
         return;
       }
@@ -130,7 +122,7 @@ export const NotionSyncDialog = ({
   }, [
     databaseBlockId,
     handleClose,
-    handleVerifyAndSave,
+    verifyAndSave,
     notion,
     pageDocId,
     progress.done,
@@ -155,24 +147,41 @@ export const NotionSyncDialog = ({
       }}
       width={480}
       title={t['com.affine.integration.notion.sync.title']()}
-      contentOptions={{ style: { padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 } }}
+      contentOptions={{
+        style: {
+          padding: '20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16,
+        },
+      }}
       withoutCloseButton={syncing}
     >
-      <p style={{ margin: 0, color: 'var(--affine-text-secondary-color)', fontSize: 13 }}>
+      <p
+        style={{
+          margin: 0,
+          color: 'var(--affine-text-secondary-color)',
+          fontSize: 13,
+        }}
+      >
         {t['com.affine.integration.notion.sync.desc']()}
       </p>
 
       <Input
         value={token}
         onChange={setToken}
-        placeholder={t['com.affine.integration.notion.sync.token-placeholder']()}
+        placeholder={t[
+          'com.affine.integration.notion.sync.token-placeholder'
+        ]()}
         disabled={syncing}
         type="password"
       />
       <Input
         value={databaseId}
         onChange={setDatabaseId}
-        placeholder={t['com.affine.integration.notion.sync.database-placeholder']()}
+        placeholder={t[
+          'com.affine.integration.notion.sync.database-placeholder'
+        ]()}
         disabled={syncing}
       />
 

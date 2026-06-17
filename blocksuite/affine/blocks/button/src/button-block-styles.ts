@@ -1,5 +1,5 @@
-import { cssVarV2 } from '@toeverything/theme/v2';
 import { css } from '@emotion/css';
+import { cssVarV2 } from '@toeverything/theme/v2';
 
 export const buttonBlockStyles = css({
   margin: '8px 0',

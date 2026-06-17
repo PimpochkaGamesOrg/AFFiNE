@@ -59,9 +59,9 @@ import { CopilotModule, CopilotRealtimeModule } from './plugins/copilot';
 import { GCloudModule } from './plugins/gcloud';
 import { IndexerModule } from './plugins/indexer';
 import { LicenseModule } from './plugins/license';
+import { NotionModule } from './plugins/notion';
 import { OAuthModule } from './plugins/oauth';
 import { PaymentModule } from './plugins/payment';
-import { NotionModule } from './plugins/notion';
 import { WorkerModule } from './plugins/worker';
 
 export const FunctionalityModules = [
@@ -213,7 +213,12 @@ export function buildAppModule(env: Env) {
     // doc service and front service
     .useIf(() => env.flavors.doc || env.flavors.front, DocServiceModule)
     // worker for and self-hosted API only for self-host and local development only
-    .useIf(() => env.dev || env.selfhosted, WorkerModule, NotionModule, SelfhostModule)
+    .useIf(
+      () => env.dev || env.selfhosted,
+      WorkerModule,
+      NotionModule,
+      SelfhostModule
+    )
     // static frontend routes for front flavor
     .useIf(() => env.flavors.front, StaticFileModule)
 

@@ -1,11 +1,13 @@
-import { DatabaseBlockDataSource } from '@blocksuite/affine-block-database';
+import {
+  DatabaseBlockDataSource,
+  getSingleDocIdFromText,
+} from '@blocksuite/affine-block-database';
 import type {
   ButtonAction,
   ButtonBlockModel,
   ButtonConfirmAction,
   DatabaseBlockModel,
 } from '@blocksuite/affine-model';
-import { getSingleDocIdFromText } from '@blocksuite/affine-block-database';
 import type { EditorHost } from '@blocksuite/std';
 import type { Workspace } from '@blocksuite/store';
 
@@ -25,7 +27,11 @@ import type {
 
 export type ExecuteAutomationResult =
   | { ok: true }
-  | { ok: false; reason: 'cancelled' | 'no_source' | 'error'; message?: string };
+  | {
+      ok: false;
+      reason: 'cancelled' | 'no_source' | 'error';
+      message?: string;
+    };
 
 export async function executeButtonAutomation(
   model: ButtonBlockModel,
@@ -37,11 +43,7 @@ export async function executeButtonAutomation(
     return { ok: false, reason: 'error', message: 'No actions configured' };
   }
 
-  const source = await resolveSourceContext(
-    provider,
-    host,
-    automation.source
-  );
+  const source = await resolveSourceContext(provider, host, automation.source);
   if (!source) {
     return {
       ok: false,
@@ -65,7 +67,13 @@ export async function executeButtonAutomation(
   for (let index = 0; index < automation.actions.length; index++) {
     const action = automation.actions[index];
     const stepIndex = index + 1;
-    const result = await executeAction(action, ctx, provider, resolver, stepIndex);
+    const result = await executeAction(
+      action,
+      ctx,
+      provider,
+      resolver,
+      stepIndex
+    );
     if (result === 'cancelled') {
       return { ok: false, reason: 'cancelled' };
     }
@@ -137,7 +145,14 @@ async function executeAddPage(
         : resolver.getPropertyIdByName(target.dataSource, propertyName);
     if (!propertyId) continue;
     const evaluated = evaluateExpression(expr, ctx, resolver);
-    setCellFromEvaluated(rowId, propertyId, target.dataSource, evaluated, provider, ctx.host);
+    setCellFromEvaluated(
+      rowId,
+      propertyId,
+      target.dataSource,
+      evaluated,
+      provider,
+      ctx.host
+    );
   }
 
   const linkedDocId = getSingleDocIdFromText(
@@ -193,9 +208,7 @@ export function findDatabaseInWorkspace(
   return block.model as DatabaseBlockModel;
 }
 
-export function listWorkspaceDatabases(input: {
-  workspace: Workspace;
-}) {
+export function listWorkspaceDatabases(input: { workspace: Workspace }) {
   const result: {
     databaseDocId: string;
     databaseBlockId: string;
@@ -222,11 +235,13 @@ export function listWorkspaceDatabases(input: {
 export function findSourceRowForDoc(
   workspace: Workspace,
   docId: string
-): {
-  databaseDocId: string;
-  databaseBlockId: string;
-  rowId: string;
-} | undefined {
+):
+  | {
+      databaseDocId: string;
+      databaseBlockId: string;
+      rowId: string;
+    }
+  | undefined {
   for (const item of listWorkspaceDatabases({ workspace })) {
     const database = findDatabaseInWorkspace(
       workspace,

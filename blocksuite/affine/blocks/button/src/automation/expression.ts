@@ -1,4 +1,7 @@
-import { DatabaseBlockDataSource } from '@blocksuite/affine-block-database';
+import {
+  DatabaseBlockDataSource,
+  getSingleDocIdFromText,
+} from '@blocksuite/affine-block-database';
 import type {
   ButtonSourceContext,
   ButtonValueExpression,
@@ -6,11 +9,11 @@ import type {
 } from '@blocksuite/affine-model';
 import { REFERENCE_NODE } from '@blocksuite/affine-shared/consts';
 import type { AffineTextAttributes } from '@blocksuite/affine-shared/types';
-import { getSingleDocIdFromText } from '@blocksuite/affine-block-database';
 import type { EditorHost } from '@blocksuite/std';
 import type { BaseTextAttributes, Text } from '@blocksuite/store';
 import { Text as YText } from '@blocksuite/store';
 
+import { normalizeExpression, parseFormula } from './formula/index.js';
 import type {
   AutomationRuntimeContext,
   ButtonAutomationContextProvider,
@@ -19,18 +22,14 @@ import type {
   PropertyResolver,
   StepResult,
 } from './types.js';
-import {
-  analyzeFormula,
-  normalizeExpression,
-  parseFormula,
-} from './formula/index.js';
 
 export function createPropertyResolver(): PropertyResolver {
   return {
     getPropertyIdByName(dataSource, name) {
       const normalized = name.trim().toLowerCase();
       const column = dataSource.properties$.value.find(
-        id => dataSource.propertyNameGet(id)?.trim().toLowerCase() === normalized
+        id =>
+          dataSource.propertyNameGet(id)?.trim().toLowerCase() === normalized
       );
       return column;
     },
@@ -63,10 +62,7 @@ export async function resolveSourceContext(
       databaseDocId: storedSource.databaseDocId,
       databaseBlockId: storedSource.databaseBlockId,
     });
-    if (
-      target &&
-      target.dataSource.rows$.value.includes(storedSource.rowId)
-    ) {
+    if (target && target.dataSource.rows$.value.includes(storedSource.rowId)) {
       return storedSource;
     }
   }
@@ -170,11 +166,7 @@ export function evaluateExpression(
       const startVal = evaluateExpression(node.start, ctx, resolver);
       const endVal = evaluateExpression(node.end, ctx, resolver);
       const start =
-        startVal.kind === 'date'
-          ? startVal.start
-          : startVal.kind === 'empty'
-            ? ctx.triggeredAt.getTime()
-            : ctx.triggeredAt.getTime();
+        startVal.kind === 'date' ? startVal.start : ctx.triggeredAt.getTime();
       let end: number | null = null;
       if (endVal.kind === 'date') {
         end = endVal.end ?? endVal.start;
@@ -208,15 +200,16 @@ export function evaluateExpression(
         propertyId
       );
       if (propertyId === 'title') {
-        const text = resolver.getRowTitleText(ctx.source.rowId, ctx.sourceDataSource);
+        const text = resolver.getRowTitleText(
+          ctx.source.rowId,
+          ctx.sourceDataSource
+        );
         const plain = text?.toString() ?? '';
         const docId = text ? getSingleDocIdFromText(text) : undefined;
         if (docId) {
           return { kind: 'linked_doc', docId, title: plain || undefined };
         }
-        return plain
-          ? { kind: 'text', value: plain }
-          : { kind: 'empty' };
+        return plain ? { kind: 'text', value: plain } : { kind: 'empty' };
       }
       if (isEmptyValue(value)) return { kind: 'empty' };
       const propertyType = resolver.getPropertyType(
@@ -229,7 +222,8 @@ export function evaluateExpression(
       }
       if (propertyType === 'rich-text') {
         const docId = getSingleDocIdFromText(value as Text);
-        if (docId) return { kind: 'linked_doc', docId, title: textFromUnknown(value) };
+        if (docId)
+          return { kind: 'linked_doc', docId, title: textFromUnknown(value) };
       }
       if (propertyType === 'select') {
         return { kind: 'select', optionId: String(value) };
@@ -358,7 +352,11 @@ export function evaluateExpression(
       } else {
         pickThen = condition.kind !== 'empty';
       }
-      return evaluateExpression(pickThen ? node.then : node.else, ctx, resolver);
+      return evaluateExpression(
+        pickThen ? node.then : node.else,
+        ctx,
+        resolver
+      );
     }
     case 'not_empty': {
       const value = evaluateExpression(node.value, ctx, resolver);
@@ -464,7 +462,7 @@ export function setRowTitleFromEvaluated(
   rowId: string,
   dataSource: DatabaseBlockDataSource,
   value: EvaluatedValue,
-  provider: ButtonAutomationContextProvider
+  _provider: ButtonAutomationContextProvider
 ) {
   const model = dataSource.doc.getBlock(rowId)?.model;
   if (!model?.text) return;
@@ -551,7 +549,11 @@ export function setCellFromEvaluated(
 
   if (value.kind === 'text') {
     if (propertyType === 'select') {
-      const optionId = resolveSelectOptionId(dataSource, propertyId, value.value);
+      const optionId = resolveSelectOptionId(
+        dataSource,
+        propertyId,
+        value.value
+      );
       if (optionId) {
         dataSource.cellValueChange(rowId, propertyId, optionId);
       }

@@ -1,19 +1,18 @@
 import { CaptionedBlockComponent } from '@blocksuite/affine-components/caption';
 import type { ButtonBlockModel } from '@blocksuite/affine-model';
 import { SettingsIcon } from '@blocksuite/icons/lit';
-import { cssVarV2 } from '@toeverything/theme/v2';
 import { html, nothing } from 'lit';
 import { styleMap } from 'lit/directives/style-map.js';
 
 import { executeButtonAutomation } from './automation/executor.js';
-import { getButtonAutomationProvider } from './services/button-automation-provider.js';
-import { openButtonConfigPanel } from './components/button-config-panel.js';
 import {
   buttonBlockStyles,
   buttonConfigureButtonStyles,
   buttonContainerStyles,
   buttonLabelStyles,
 } from './button-block-styles.js';
+import { openButtonConfigPanel } from './components/button-config-panel.js';
+import { getButtonAutomationProvider } from './services/button-automation-provider.js';
 
 export class ButtonBlockComponent extends CaptionedBlockComponent<ButtonBlockModel> {
   private _running = false;
@@ -33,7 +32,11 @@ export class ButtonBlockComponent extends CaptionedBlockComponent<ButtonBlockMod
 
     this._running = true;
     try {
-      const result = await executeButtonAutomation(this.model, this.host, provider);
+      const result = await executeButtonAutomation(
+        this.model,
+        this.host,
+        provider
+      );
       if (!result.ok && result.reason !== 'cancelled' && result.message) {
         provider.notify?.({
           title: result.message,

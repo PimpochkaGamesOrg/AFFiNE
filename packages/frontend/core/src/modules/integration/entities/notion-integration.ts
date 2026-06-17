@@ -1,13 +1,12 @@
 import { DatabaseBlockDataSource } from '@blocksuite/affine/blocks/database';
 import type { DatabaseBlockModel } from '@blocksuite/affine/model';
+import { type DeltaInsert, Text } from '@blocksuite/affine/store';
 import type { AffineTextAttributes } from '@blocksuite/affine-shared/types';
-import { Text, type DeltaInsert } from '@blocksuite/affine/store';
 import { Entity, LiveData } from '@toeverything/infra';
 import { chunk } from 'lodash-es';
 
+import type { WorkspaceServerService } from '../../cloud';
 import type { DocsService } from '../../doc';
-import { WorkspaceServerService } from '../../cloud';
-import { IntegrationPropertyService } from '../services/integration-property';
 import { blocksToMarkdown, getPageTitle } from '../notion/blocks-to-markdown';
 import { NotionApiClient } from '../notion/notion-api';
 import {
@@ -19,10 +18,10 @@ import {
 } from '../notion/property-columns';
 import { getCellValueForProperty } from '../notion/property-mapper';
 import type { NotionDatabasePropertySchema, NotionPage } from '../notion/types';
-import type { NotionRefMeta } from '../type';
+import { IntegrationPropertyService } from '../services/integration-property';
 import type { IntegrationRefStore } from '../store/integration-ref';
 import type { NotionStore } from '../store/notion';
-import type { NotionConfig } from '../type';
+import type { NotionConfig, NotionRefMeta } from '../type';
 import { encryptPBKDF2 } from '../utils/encrypt';
 import type { IntegrationWriter } from './writer';
 
@@ -87,9 +86,7 @@ export class NotionIntegration extends Entity<{ writer: IntegrationWriter }> {
     const token = this.notionStore.getSetting(databaseBlockId, 'token');
     if (!token) return [];
 
-    const integrationId = await encryptPBKDF2(
-      `${token}:${databaseBlockId}`
-    );
+    const integrationId = await encryptPBKDF2(`${token}:${databaseBlockId}`);
 
     return this.integrationRefStore
       .getRefs({ type: 'notion', integrationId })
@@ -136,11 +133,7 @@ export class NotionIntegration extends Entity<{ writer: IntegrationWriter }> {
       );
       const resolvedColumnId =
         columnId ??
-        findColumnIdForProperty(
-          datasource,
-          propertyName,
-          schema[propertyName]
-        );
+        findColumnIdForProperty(datasource, propertyName, schema[propertyName]);
       if (!resolvedColumnId) continue;
 
       const cellValue = getCellValueForProperty(
@@ -211,14 +204,13 @@ export class NotionIntegration extends Entity<{ writer: IntegrationWriter }> {
     this.applyPageProperties(page, datasource, rowId, schema);
 
     const { doc, release } = this.docsService.open(docId);
-    doc.scope.get(IntegrationPropertyService).updateIntegrationProperties(
-      'notion',
-      {
+    doc.scope
+      .get(IntegrationPropertyService)
+      .updateIntegrationProperties('notion', {
         notionPageId: page.id,
         notionUrl: page.url,
         lastEditedAt: page.last_edited_time,
-      }
-    );
+      });
     release();
 
     this.integrationRefStore.createRef(docId, {
@@ -242,8 +234,14 @@ export class NotionIntegration extends Entity<{ writer: IntegrationWriter }> {
     onComplete?: () => void;
     onAbort?: (finished: number) => void;
   }) {
-    const { databaseBlockId, pageDocId, signal, onProgress, onComplete, onAbort } =
-      options;
+    const {
+      databaseBlockId,
+      pageDocId,
+      signal,
+      onProgress,
+      onComplete,
+      onAbort,
+    } = options;
 
     const token = this.notionStore.getSetting(databaseBlockId, 'token');
     const notionDatabaseId = this.notionStore.getSetting(
@@ -255,105 +253,113 @@ export class NotionIntegration extends Entity<{ writer: IntegrationWriter }> {
     }
 
     this.syncing$.next(true);
-    let finished = this.notionStore.getSetting(databaseBlockId, 'syncedCount') ?? 0;
+    let finished =
+      this.notionStore.getSetting(databaseBlockId, 'syncedCount') ?? 0;
 
     try {
       const client = new NotionApiClient(this.getApiBaseUrl(), token);
       const notionDatabase = await client.getDatabase(notionDatabaseId);
       const schema = notionDatabase.properties;
-      const integrationId = await encryptPBKDF2(
-        `${token}:${databaseBlockId}`
-      );
+      const integrationId = await encryptPBKDF2(`${token}:${databaseBlockId}`);
       const updateStrategy =
         this.notionStore.getSetting(databaseBlockId, 'updateStrategy') ??
         'override';
 
       const docRef = await this.ensureDocLoaded(pageDocId);
       try {
-      const dbModel = docRef.doc.blockSuiteDoc.getModelById(
-        databaseBlockId
-      ) as DatabaseBlockModel | null;
-      if (!dbModel) {
-        throw new Error('Database block not found');
-      }
-
-      const datasource = new DatabaseBlockDataSource(dbModel);
-      const titleColumnId =
-        dbModel.props.columns.find(column => column.type === 'title')?.id ??
-        dbModel.props.views[0]?.header?.titleColumn;
-
-      ensureAllColumnsFromSchema(datasource, schema);
-
-      const localRefs = await this.getRefs(databaseBlockId);
-      const localRefsMap = new Map(
-        localRefs.map(ref => [ref.refMeta.notionPageId, ref])
-      );
-
-      let cursor =
-        this.notionStore.getSetting(databaseBlockId, 'lastSyncCursor') ?? null;
-      let hasMore = true;
-
-      while (hasMore) {
-        if (signal?.aborted) {
-          onAbort?.(finished);
-          return;
+        const dbModel = docRef.doc.blockSuiteDoc.getModelById(
+          databaseBlockId
+        ) as DatabaseBlockModel | null;
+        if (!dbModel) {
+          throw new Error('Database block not found');
         }
 
-        const response = await client.queryDatabase(notionDatabaseId, cursor);
-        const pages = response.results;
+        const datasource = new DatabaseBlockDataSource(dbModel);
+        const titleColumnId =
+          dbModel.props.columns.find(column => column.type === 'title')?.id ??
+          dbModel.props.views[0]?.header?.titleColumn;
 
-        for (const pageChunk of chunk(pages, BATCH_SIZE)) {
+        ensureAllColumnsFromSchema(datasource, schema);
+
+        const localRefs = await this.getRefs(databaseBlockId);
+        const localRefsMap = new Map(
+          localRefs.map(ref => [ref.refMeta.notionPageId, ref])
+        );
+
+        let cursor =
+          this.notionStore.getSetting(databaseBlockId, 'lastSyncCursor') ??
+          null;
+        let hasMore = true;
+
+        while (hasMore) {
           if (signal?.aborted) {
             onAbort?.(finished);
             return;
           }
 
-          await Promise.all(
-            pageChunk.map(async page => {
-              await new Promise<void>(resolve => {
-                requestIdleCallback(() => resolve(), { timeout: 500 });
-              });
+          const response = await client.queryDatabase(notionDatabaseId, cursor);
+          const pages = response.results;
 
-              const localRef = localRefsMap.get(page.id);
-              const localUpdatedAt = localRef?.refMeta.updatedAt;
-              if (
-                localUpdatedAt &&
-                localUpdatedAt === page.last_edited_time &&
-                localRef
-              ) {
+          for (const pageChunk of chunk(pages, BATCH_SIZE)) {
+            if (signal?.aborted) {
+              onAbort?.(finished);
+              return;
+            }
+
+            await Promise.all(
+              pageChunk.map(async page => {
+                await new Promise<void>(resolve => {
+                  requestIdleCallback(() => resolve(), { timeout: 500 });
+                });
+
+                const localRef = localRefsMap.get(page.id);
+                const localUpdatedAt = localRef?.refMeta.updatedAt;
+                if (
+                  localUpdatedAt &&
+                  localUpdatedAt === page.last_edited_time &&
+                  localRef
+                ) {
+                  finished++;
+                  return;
+                }
+
+                await this.syncPage(page, {
+                  client,
+                  datasource,
+                  titleColumnId,
+                  integrationId,
+                  localRef,
+                  updateStrategy,
+                  schema,
+                });
                 finished++;
-                return;
-              }
+              })
+            );
 
-              await this.syncPage(page, {
-                client,
-                datasource,
-                titleColumnId,
-                integrationId,
-                localRef,
-                updateStrategy,
-                schema,
-              });
-              finished++;
-            })
+            this.notionStore.setSetting(
+              databaseBlockId,
+              'syncedCount',
+              finished
+            );
+            this.progress$.next({ done: finished, hasMore: response.has_more });
+            onProgress?.(finished, response.has_more);
+          }
+
+          hasMore = response.has_more;
+          cursor = response.next_cursor;
+          this.notionStore.setSetting(
+            databaseBlockId,
+            'lastSyncCursor',
+            cursor
           );
-
-          this.notionStore.setSetting(databaseBlockId, 'syncedCount', finished);
-          this.progress$.next({ done: finished, hasMore: response.has_more });
-          onProgress?.(finished, response.has_more);
         }
 
-        hasMore = response.has_more;
-        cursor = response.next_cursor;
-        this.notionStore.setSetting(databaseBlockId, 'lastSyncCursor', cursor);
-      }
-
-      this.notionStore.setSettings(databaseBlockId, {
-        lastSyncCursor: null,
-        lastSyncAt: new Date().toISOString(),
-        syncedCount: finished,
-      });
-      onComplete?.();
+        this.notionStore.setSettings(databaseBlockId, {
+          lastSyncCursor: null,
+          lastSyncAt: new Date().toISOString(),
+          syncedCount: finished,
+        });
+        onComplete?.();
       } finally {
         docRef.release();
       }

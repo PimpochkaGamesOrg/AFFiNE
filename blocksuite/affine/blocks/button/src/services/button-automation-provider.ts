@@ -1,7 +1,7 @@
 import { DatabaseBlockDataSource } from '@blocksuite/affine-block-database';
 import type { ButtonSourceContext } from '@blocksuite/affine-model';
 import { createIdentifier } from '@blocksuite/global/di';
-import type { BlockStdScope, EditorHost } from '@blocksuite/std';
+import type { BlockStdScope } from '@blocksuite/std';
 import type { ExtensionType } from '@blocksuite/store';
 
 import {
@@ -9,11 +9,11 @@ import {
   findSourceRowForDoc,
   listWorkspaceDatabases,
 } from '../automation/executor.js';
-import { ensureButtonConfirmDialog } from '../components/confirm-dialog.js';
 import type {
   ButtonAutomationContextProvider,
   DatabaseTarget,
 } from '../automation/types.js';
+import { ensureButtonConfirmDialog } from '../components/confirm-dialog.js';
 
 export type ButtonAutomationNotification = {
   title: string;
@@ -70,7 +70,9 @@ export function createDefaultButtonAutomationProvider(): ButtonAutomationProvide
     async findDatabaseByName({ host, name }) {
       const match = listWorkspaceDatabases({
         workspace: host.store.workspace,
-      }).find(item => item.name.trim().toLowerCase() === name.trim().toLowerCase());
+      }).find(
+        item => item.name.trim().toLowerCase() === name.trim().toLowerCase()
+      );
       if (!match) return undefined;
       return this.resolveDatabaseTarget({
         host,
@@ -79,8 +81,7 @@ export function createDefaultButtonAutomationProvider(): ButtonAutomationProvide
       });
     },
     buildDocUrl(docId, host) {
-      const origin =
-        typeof location !== 'undefined' ? location.origin : '';
+      const origin = typeof location !== 'undefined' ? location.origin : '';
       return `${origin}/workspace/${host.store.workspace.id}/${docId}`;
     },
     async showConfirm(input) {

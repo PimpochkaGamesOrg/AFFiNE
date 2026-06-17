@@ -14,11 +14,25 @@ export type ButtonValueExpression =
   | { type: 'property_of'; base: ButtonValueExpression; name: string }
   | { type: 'literal'; value: string }
   | { type: 'concat'; parts: ButtonValueExpression[] }
-  | { type: 'if_empty'; value: ButtonValueExpression; then: ButtonValueExpression; else: ButtonValueExpression }
-  | { type: 'if'; condition: ButtonValueExpression; then: ButtonValueExpression; else: ButtonValueExpression }
+  | {
+      type: 'if_empty';
+      value: ButtonValueExpression;
+      then: ButtonValueExpression;
+      else: ButtonValueExpression;
+    }
+  | {
+      type: 'if';
+      condition: ButtonValueExpression;
+      then: ButtonValueExpression;
+      else: ButtonValueExpression;
+    }
   | { type: 'empty'; value: ButtonValueExpression }
   | { type: 'not_empty'; value: ButtonValueExpression }
-  | { type: 'date_range'; start: ButtonValueExpression; end: ButtonValueExpression }
+  | {
+      type: 'date_range';
+      start: ButtonValueExpression;
+      end: ButtonValueExpression;
+    }
   | { type: 'not_empty_marker'; value: ButtonValueExpression; marker: string }
   | { type: 'formula'; source: string };
 
@@ -72,7 +86,7 @@ export const defaultButtonAutomation = (): ButtonAutomationConfig => ({
 
 export const ButtonBlockSchema = defineBlockSchema({
   flavour: 'affine:button',
-  props: (internal): ButtonBlockProps => ({
+  props: (_internal): ButtonBlockProps => ({
     automation: defaultButtonAutomation(),
     'meta:createdAt': undefined,
     'meta:updatedAt': undefined,

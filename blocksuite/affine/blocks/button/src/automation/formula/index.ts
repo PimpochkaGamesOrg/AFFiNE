@@ -41,7 +41,7 @@ function skipSpace(input: string, index: number) {
 
 function readIdent(input: string, index: number) {
   let i = index;
-  while (i < input.length && /[A-Za-z0-9_\-]/.test(input[i]!)) i += 1;
+  while (i < input.length && /[A-Za-z0-9_-]/.test(input[i]!)) i += 1;
   if (i === index) return null;
   return { value: input.slice(index, i), next: i };
 }
@@ -55,7 +55,9 @@ function readNumber(input: string, index: number) {
 
 function matchKeyword(input: string, index: number, keyword: string) {
   const i = skipSpace(input, index);
-  if (input.slice(i, i + keyword.length).toLowerCase() !== keyword.toLowerCase()) {
+  if (
+    input.slice(i, i + keyword.length).toLowerCase() !== keyword.toLowerCase()
+  ) {
     return null;
   }
   const after = i + keyword.length;
@@ -63,7 +65,10 @@ function matchKeyword(input: string, index: number, keyword: string) {
   return after;
 }
 
-function parsePrimary(input: string, index: number): {
+function parsePrimary(
+  input: string,
+  index: number
+): {
   expr: ButtonValueExpression;
   next: number;
 } | null {
@@ -96,6 +101,7 @@ function parsePrimary(input: string, index: number): {
         expr: {
           type: 'if_empty',
           value: cond.expr.value,
+          // oxlint-disable-next-line unicorn/no-thenable
           then: thenExpr.expr,
           else: elseExpr.expr,
         },
@@ -107,6 +113,7 @@ function parsePrimary(input: string, index: number): {
         expr: {
           type: 'if',
           condition: cond.expr,
+          // oxlint-disable-next-line unicorn/no-thenable
           then: thenExpr.expr,
           else: elseExpr.expr,
         },
@@ -117,6 +124,7 @@ function parsePrimary(input: string, index: number): {
       expr: {
         type: 'if',
         condition: cond.expr,
+        // oxlint-disable-next-line unicorn/no-thenable
         then: thenExpr.expr,
         else: elseExpr.expr,
       },
@@ -243,7 +251,10 @@ function parsePrimary(input: string, index: number): {
   return null;
 }
 
-function parseExpr(input: string, index: number): {
+function parseExpr(
+  input: string,
+  index: number
+): {
   expr: ButtonValueExpression;
   next: number;
 } | null {
@@ -297,7 +308,8 @@ function parseExpr(input: string, index: number): {
     return {
       expr: {
         type: 'property_of',
-        base: first.expr.type === 'this_page' ? { type: 'this_page' } : first.expr,
+        base:
+          first.expr.type === 'this_page' ? { type: 'this_page' } : first.expr,
         name: ident.value,
       },
       next: ident.next,
@@ -373,13 +385,14 @@ export function analyzeFormula(expr: ButtonValueExpression): FormulaWarning[] {
       walk(parseFormula(node.source), inDateRange);
       return;
     }
-    if (node.type === 'property' || node.type === 'property_of') {
-      if (inDateRange) {
-        warnings.push({
-          message: 'Called function on a value that may be empty.',
-          severity: 'warning',
-        });
-      }
+    if (
+      (node.type === 'property' || node.type === 'property_of') &&
+      inDateRange
+    ) {
+      warnings.push({
+        message: 'Called function on a value that may be empty.',
+        severity: 'warning',
+      });
     }
     if (node.type === 'date_range') {
       walk(node.start, true);

@@ -9,9 +9,9 @@ import {
   analyzeFormula,
   expressionToDisplay,
   expressionToTokens,
-  parseFormula,
   type FormulaToken,
   type FormulaWarning,
+  parseFormula,
 } from '../automation/formula/index.js';
 
 const editorBoxStyle = `
@@ -155,7 +155,11 @@ export class ButtonFormulaEditor extends ShadowlessElement {
       <div>
         <div style=${editorBoxStyle} @click=${() => this._startEdit()}>
           ${hasTokens
-            ? repeat(this.tokens, (_, i) => i, token => this._renderToken(token))
+            ? repeat(
+                this.tokens,
+                (_, i) => i,
+                token => this._renderToken(token)
+              )
             : html`<span style="opacity:0.5;font-size:12px;"
                 >${this.placeholder}</span
               >`}

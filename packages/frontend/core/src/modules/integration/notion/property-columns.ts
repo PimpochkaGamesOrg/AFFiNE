@@ -1,6 +1,6 @@
 import type { DatabaseBlockDataSource } from '@blocksuite/affine/blocks/database';
-import { getTagColor } from '@blocksuite/data-view';
 import { nanoid } from '@blocksuite/affine/store';
+import { getTagColor } from '@blocksuite/data-view';
 
 import type { NotionDatabasePropertySchema, NotionPageProperty } from './types';
 
@@ -104,7 +104,10 @@ function applySelectOptions(
     options?: SelectOption[];
   };
   const options = mergeSelectOptions(
-    mergeSelectOptions(data.options ?? [], buildSelectOptionsFromSchema(schema)),
+    mergeSelectOptions(
+      data.options ?? [],
+      buildSelectOptionsFromSchema(schema)
+    ),
     property ? collectSelectOptionsFromValue(property) : []
   );
   if (options.length > 0) {
