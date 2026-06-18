@@ -90,7 +90,7 @@ export class ButtonConfirmDialog extends ShadowlessElement {
               style="
                 border: none;
                 background: ${cssVarV2.button.primary};
-                color: ${cssVarV2.button.pureWhite};
+                color: ${cssVarV2.button.pureWhite()};
                 border-radius: 8px;
                 padding: 8px 14px;
                 cursor: pointer;
@@ -118,7 +118,10 @@ export function ensureButtonConfirmDialog(): ButtonConfirmDialog {
   ) as ButtonConfirmDialog | null;
   if (!dialog) {
     if (!customElements.get('affine-button-confirm-dialog')) {
-      customElements.define('affine-button-confirm-dialog', ButtonConfirmDialog);
+      customElements.define(
+        'affine-button-confirm-dialog',
+        ButtonConfirmDialog
+      );
     }
     dialog = document.createElement('affine-button-confirm-dialog');
     document.body.append(dialog);

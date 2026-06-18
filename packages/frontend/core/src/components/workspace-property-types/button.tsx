@@ -1,5 +1,6 @@
 import { notify, PropertyValue } from '@affine/component';
 import { DocService } from '@affine/core/modules/doc';
+import { DocDatabaseBacklinksService } from '@affine/core/modules/doc-info/services/doc-database-backlinks';
 import { EditorService } from '@affine/core/modules/editor';
 import { WorkspaceService } from '@affine/core/modules/workspace';
 import { WorkspacePropertyService } from '@affine/core/modules/workspace-property';
@@ -11,11 +12,12 @@ import {
 } from '@blocksuite/affine/blocks/button';
 import type { ButtonAutomationConfig } from '@blocksuite/affine/model';
 import { SettingsIcon } from '@blocksuite/icons/rc';
-import { useLiveData, useService } from '@toeverything/infra';
+import { LiveData, useLiveData, useService } from '@toeverything/infra';
 import {
   type MouseEvent,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -47,6 +49,7 @@ export const ButtonValue = ({ propertyInfo, readonly }: PropertyValueProps) => {
   const workspaceService = useService(WorkspaceService);
   const workspacePropertyService = useService(WorkspacePropertyService);
   const docService = useService(DocService);
+  const docDatabaseBacklinks = useService(DocDatabaseBacklinksService);
   const editorContainer = useLiveData(editorService.editor.editorContainer$);
   const containerRef = useRef<HTMLDivElement>(null);
   const [running, setRunning] = useState(false);
@@ -59,10 +62,24 @@ export const ButtonValue = ({ propertyInfo, readonly }: PropertyValueProps) => {
   const workspaceProperties = useLiveData(workspacePropertyService.properties$);
   const automation = parseButtonPropertyData(livePropertyInfo ?? propertyInfo);
   const docId = docService.doc.id;
+  const databaseBacklinks = useLiveData(
+    useMemo(
+      () =>
+        LiveData.from(docDatabaseBacklinks.watchDbBacklinkRows$(docId), []).map(
+          rows =>
+            rows.map(row => ({
+              docId: row.docId,
+              databaseBlockId: row.databaseBlockId,
+            }))
+        ),
+      [docDatabaseBacklinks, docId]
+    )
+  );
   const visible = isButtonPropertyVisible(
     workspaceService.workspace.docCollection,
     docId,
-    automation
+    automation,
+    databaseBacklinks
   );
   const disabled = running;
 

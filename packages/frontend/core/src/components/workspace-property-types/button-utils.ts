@@ -45,14 +45,32 @@ export function createButtonPropertyAdditionalData(
   return { automation };
 }
 
+export type ButtonDatabaseBacklink = {
+  docId: string;
+  databaseBlockId: string;
+};
+
+function sourceDatabaseKey(
+  sourceDatabase: NonNullable<ButtonAutomationConfig['sourceDatabase']>
+) {
+  return `${sourceDatabase.databaseDocId}:${sourceDatabase.databaseBlockId}`;
+}
+
 export function isButtonPropertyVisible(
   workspace: Workspace,
   docId: string,
-  automation: ButtonAutomationConfig
+  automation: ButtonAutomationConfig,
+  databaseBacklinks?: ButtonDatabaseBacklink[]
 ): boolean {
   const { sourceDatabase } = automation;
   if (!sourceDatabase?.databaseDocId || !sourceDatabase.databaseBlockId) {
     return false;
+  }
+  const sourceKey = sourceDatabaseKey(sourceDatabase);
+  if (databaseBacklinks?.length) {
+    return databaseBacklinks.some(
+      backlink => `${backlink.docId}:${backlink.databaseBlockId}` === sourceKey
+    );
   }
   return !!findSourceRowForDocInDatabase(
     workspace,

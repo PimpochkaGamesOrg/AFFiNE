@@ -11,6 +11,7 @@ import {
 import type { DocCustomPropertyInfo } from '@affine/core/modules/db';
 import { DocService } from '@affine/core/modules/doc';
 import { DocDatabaseBacklinkInfo } from '@affine/core/modules/doc-info';
+import { DocDatabaseBacklinksService } from '@affine/core/modules/doc-info/services/doc-database-backlinks';
 import type {
   DatabaseRow,
   DatabaseValueCell,
@@ -25,6 +26,7 @@ import { track } from '@affine/track';
 import { PlusIcon, PropertyIcon, ToggleDownIcon } from '@blocksuite/icons/rc';
 import * as Collapsible from '@radix-ui/react-collapsible';
 import {
+  LiveData,
   useLiveData,
   useService,
   useServiceOptional,
@@ -142,6 +144,7 @@ export const WorkspacePropertyRow = ({
   const docService = useService(DocService);
   const workspaceService = useService(WorkspaceService);
   const workspacePropertyService = useService(WorkspacePropertyService);
+  const docDatabaseBacklinks = useService(DocDatabaseBacklinksService);
   const customPropertyValue = useLiveData(
     docService.doc.customProperty$(propertyInfo.id)
   );
@@ -170,6 +173,19 @@ export const WorkspacePropertyRow = ({
   );
 
   const docId = docService.doc.id;
+  const databaseBacklinks = useLiveData(
+    useMemo(
+      () =>
+        LiveData.from(docDatabaseBacklinks.watchDbBacklinkRows$(docId), []).map(
+          rows =>
+            rows.map(row => ({
+              docId: row.docId,
+              databaseBlockId: row.databaseBlockId,
+            }))
+        ),
+      [docDatabaseBacklinks, docId]
+    )
+  );
   const { dragRef } = useDraggable<AffineDNDData>(
     () => ({
       canDrag: !propertyInfoReadonly,
@@ -235,7 +251,8 @@ export const WorkspacePropertyRow = ({
       !isButtonPropertyVisible(
         workspaceService.workspace.docCollection,
         docId,
-        automation
+        automation,
+        databaseBacklinks
       )
     ) {
       return null;

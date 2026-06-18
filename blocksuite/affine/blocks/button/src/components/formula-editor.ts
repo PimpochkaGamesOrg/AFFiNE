@@ -42,7 +42,7 @@ const pillStyle = `
   padding: 2px 8px;
   border-radius: 6px;
   background: ${cssVarV2.button.primary};
-  color: ${cssVarV2.button.pureWhite};
+  color: ${cssVarV2.button.pureWhite()};
   font-size: 12px;
   line-height: 1.4;
   max-width: 100%;

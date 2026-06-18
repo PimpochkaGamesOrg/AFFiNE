@@ -1,5 +1,7 @@
 import {
   createPopup,
+  menu,
+  popMenu,
   popupTargetFromElement,
 } from '@blocksuite/affine-components/context-menu';
 import type {
@@ -95,13 +97,27 @@ const saveBtnStyle = `
   width: 100%;
   border: none;
   background: ${cssVarV2.button.primary};
-  color: ${cssVarV2.button.pureWhite};
+  color: ${cssVarV2.button.pureWhite()};
   border-radius: 10px;
   padding: 12px 16px;
   cursor: pointer;
   font-weight: 600;
   font-size: 14px;
   margin-top: 8px;
+`;
+
+const addActionBtnStyle = `
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: ${cssVarV2.text.secondary};
+  border-radius: 8px;
+  padding: 6px 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
 `;
 
 const propertyRowStyle = `
@@ -220,6 +236,38 @@ export class ButtonConfigPanel extends ShadowlessElement {
       const action = draft.actions[index];
       if (!action) return;
       updater(action);
+    });
+  }
+
+  private _openAddActionMenu(event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const target = event.currentTarget as HTMLElement;
+    const hasDatabases = this.databases.length > 0;
+    popMenu(popupTargetFromElement(target), {
+      options: {
+        items: [
+          menu.action({
+            name: 'Show confirmation',
+            select: () => {
+              this._addAction('confirm');
+            },
+          }),
+          menu.action({
+            name: 'Add page to',
+            hide: () => !hasDatabases,
+            select: () => {
+              this._addAction('add_page');
+            },
+          }),
+          menu.action({
+            name: 'Edit this page',
+            select: () => {
+              this._addAction('edit');
+            },
+          }),
+        ],
+      },
     });
   }
 
@@ -599,27 +647,13 @@ export class ButtonConfigPanel extends ShadowlessElement {
             </div>`
           : nothing}
 
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
-          <button
-            style=${smallBtnStyle}
-            @click=${() => this._addAction('confirm')}
-          >
-            + Show confirmation
-          </button>
-          <button
-            style=${smallBtnStyle}
-            ?disabled=${!hasDatabases}
-            @click=${() => this._addAction('add_page')}
-          >
-            + Add page to
-          </button>
-          <button
-            style=${smallBtnStyle}
-            @click=${() => this._addAction('edit')}
-          >
-            + Edit this page
-          </button>
-        </div>
+        <button
+          type="button"
+          style=${addActionBtnStyle}
+          @click=${this._openAddActionMenu}
+        >
+          ${PlusIcon({ width: '14px', height: '14px' })} Add action
+        </button>
 
         <button
           style=${saveBtnStyle}

@@ -19,7 +19,7 @@ export const buttonLabelStyles = css({
   fontWeight: 600,
   cursor: 'pointer',
   background: cssVarV2.button.primary,
-  color: cssVarV2.button.pureWhite,
+  color: cssVarV2.button.pureWhite(),
   boxShadow: '0 1px 2px rgba(0, 0, 0, 0.08)',
   ':hover': {
     filter: 'brightness(1.03)',
