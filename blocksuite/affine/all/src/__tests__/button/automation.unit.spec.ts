@@ -162,4 +162,38 @@ describe('button automation formula parser', () => {
       parts: [{ type: 'this_page' }, { type: 'property', name: 'Name' }],
     });
   });
+
+  test('parses cyrillic property names', () => {
+    expect(parseFormula('This page.Рубрика')).toEqual({
+      type: 'property',
+      name: 'Рубрика',
+    });
+    expect(parseFormula('This page.Название эпизода')).toEqual({
+      type: 'property',
+      name: 'Название эпизода',
+    });
+  });
+
+  test('parses cyrillic property in if and concat', () => {
+    expect(
+      parseFormula(
+        'if(empty(This page.Разработка), "Синхронизировать?", "Уже синхронизировано")'
+      )
+    ).toEqual({
+      type: 'if_empty',
+      value: { type: 'property', name: 'Разработка' },
+      then: { type: 'literal', value: 'Синхронизировать?' },
+      else: { type: 'literal', value: 'Уже синхронизировано' },
+    });
+
+    expect(
+      parseFormula('This page.Название эпизода + " ENGLISH VERSION"')
+    ).toEqual({
+      type: 'concat',
+      parts: [
+        { type: 'property', name: 'Название эпизода' },
+        { type: 'literal', value: ' ENGLISH VERSION' },
+      ],
+    });
+  });
 });

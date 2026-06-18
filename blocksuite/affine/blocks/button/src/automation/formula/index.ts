@@ -13,6 +13,16 @@ export type FormulaToken =
 
 const trim = (value: string) => value.trim();
 
+const IDENT_CHAR = /[\p{L}\p{N}_-]/u;
+
+function isIdentChar(ch: string) {
+  return IDENT_CHAR.test(ch);
+}
+
+function isKeywordBoundaryChar(ch: string) {
+  return /[\p{L}\p{N}_]/u.test(ch);
+}
+
 function parseStringLiteral(input: string, index: number) {
   const quote = input[index];
   if (quote !== '"' && quote !== "'") return null;
@@ -41,9 +51,31 @@ function skipSpace(input: string, index: number) {
 
 function readIdent(input: string, index: number) {
   let i = index;
-  while (i < input.length && /[A-Za-z0-9_-]/.test(input[i]!)) i += 1;
+  while (i < input.length && isIdentChar(input[i]!)) i += 1;
   if (i === index) return null;
   return { value: input.slice(index, i), next: i };
+}
+
+function isPropertyNameDelimiter(ch: string | undefined) {
+  return (
+    ch == null ||
+    ch === '+' ||
+    ch === '(' ||
+    ch === ')' ||
+    ch === ',' ||
+    ch === '.'
+  );
+}
+
+function readPropertyName(input: string, index: number) {
+  let i = skipSpace(input, index);
+  const start = i;
+  while (i < input.length && !isPropertyNameDelimiter(input[i])) {
+    i += 1;
+  }
+  const value = input.slice(start, i).trim();
+  if (!value) return null;
+  return { value, next: i };
 }
 
 function readNumber(input: string, index: number) {
@@ -61,7 +93,7 @@ function matchKeyword(input: string, index: number, keyword: string) {
     return null;
   }
   const after = i + keyword.length;
-  if (after < input.length && /[A-Za-z0-9_]/.test(input[after]!)) return null;
+  if (after < input.length && isKeywordBoundaryChar(input[after]!)) return null;
   return after;
 }
 
@@ -179,14 +211,14 @@ function parsePrimary(
     }
     if (input[i] === '.') {
       i = skipSpace(input, i + 1);
-      const ident = readIdent(input, i);
-      if (ident) {
+      const propertyName = readPropertyName(input, i);
+      if (propertyName) {
         return {
           expr: {
             type: 'property',
-            name: ident.value === 'Name' ? 'Name' : ident.value,
+            name: propertyName.value === 'Name' ? 'Name' : propertyName.value,
           },
-          next: ident.next,
+          next: propertyName.next,
         };
       }
     }
@@ -299,16 +331,16 @@ function parseExpr(
 
   if (input[i] === '.') {
     i = skipSpace(input, i + 1);
-    const ident = readIdent(input, i);
-    if (!ident) return first;
+    const propertyName = readPropertyName(input, i);
+    if (!propertyName) return first;
     return {
       expr: {
         type: 'property_of',
         base:
           first.expr.type === 'this_page' ? { type: 'this_page' } : first.expr,
-        name: ident.value,
+        name: propertyName.value,
       },
-      next: ident.next,
+      next: propertyName.next,
     };
   }
 

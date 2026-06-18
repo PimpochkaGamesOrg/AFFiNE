@@ -10,8 +10,27 @@ import type {
 import { REFERENCE_NODE } from '@blocksuite/affine-shared/consts';
 import type { AffineTextAttributes } from '@blocksuite/affine-shared/types';
 import type { EditorHost } from '@blocksuite/std';
-import type { BaseTextAttributes, Text } from '@blocksuite/store';
-import { Text as YText } from '@blocksuite/store';
+import {
+  type BaseTextAttributes,
+  type DeltaInsert,
+  Text,
+} from '@blocksuite/store';
+
+function createLinkedDocCellText(docIds: string[]): Text {
+  const deltas: DeltaInsert<BaseTextAttributes>[] = [];
+  docIds.forEach((docId, index) => {
+    if (index > 0) {
+      deltas.push({ insert: ' ' });
+    }
+    deltas.push({
+      insert: REFERENCE_NODE,
+      attributes: {
+        reference: { type: 'LinkedPage', pageId: docId },
+      } satisfies AffineTextAttributes as BaseTextAttributes,
+    });
+  });
+  return new Text(deltas);
+}
 
 import {
   createDataSourceForDatabase,
@@ -113,7 +132,7 @@ export function createRuntimeContext(input: {
 
 function isEmptyValue(value: unknown): boolean {
   if (value == null) return true;
-  if (value instanceof YText) return value.length === 0;
+  if (value instanceof Text) return value.length === 0;
   if (typeof value === 'string') return value.trim().length === 0;
   if (Array.isArray(value)) return value.length === 0;
   if (typeof value === 'object' && 'start' in (value as object)) {
@@ -125,7 +144,7 @@ function isEmptyValue(value: unknown): boolean {
 
 function textFromUnknown(value: unknown): string {
   if (value == null) return '';
-  if (value instanceof YText) return value.toString();
+  if (value instanceof Text) return value.toString();
   if (typeof value === 'string') return value;
   if (typeof value === 'number' || typeof value === 'boolean') {
     return String(value);
@@ -501,14 +520,11 @@ export function setCellFromEvaluated(
   }
 
   if (value.kind === 'linked_docs') {
-    const text = new YText();
-    value.docIds.forEach((docId, index) => {
-      if (index > 0) text.insert(' ', text.length);
-      text.insert(REFERENCE_NODE, text.length, {
-        reference: { type: 'LinkedPage', pageId: docId },
-      } satisfies AffineTextAttributes as BaseTextAttributes);
-    });
-    dataSource.cellValueChange(rowId, propertyId, text);
+    dataSource.cellValueChange(
+      rowId,
+      propertyId,
+      createLinkedDocCellText(value.docIds)
+    );
     return;
   }
 
@@ -518,11 +534,11 @@ export function setCellFromEvaluated(
       dataSource.cellValueChange(rowId, propertyId, url);
       return;
     }
-    const text = new YText();
-    text.insert(REFERENCE_NODE, 0, {
-      reference: { type: 'LinkedPage', pageId: value.docId },
-    } satisfies AffineTextAttributes as BaseTextAttributes);
-    dataSource.cellValueChange(rowId, propertyId, text);
+    dataSource.cellValueChange(
+      rowId,
+      propertyId,
+      createLinkedDocCellText([value.docId])
+    );
     return;
   }
 
@@ -576,7 +592,7 @@ export function setCellFromEvaluated(
       dataSource.cellValueChange(rowId, propertyId, value.value);
       return;
     }
-    dataSource.cellValueChange(rowId, propertyId, new YText(value.value));
+    dataSource.cellValueChange(rowId, propertyId, new Text(value.value));
     return;
   }
 }
@@ -603,7 +619,7 @@ function clearCellValue(
       dataSource.cellValueChange(rowId, propertyId, '');
       return;
     default:
-      dataSource.cellValueChange(rowId, propertyId, new YText());
+      dataSource.cellValueChange(rowId, propertyId, new Text());
   }
 }
 
