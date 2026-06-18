@@ -1,5 +1,6 @@
 import {
   type DatabaseBlockDataSource,
+  getPlainTextFromText,
   getSingleDocIdFromText,
 } from '@blocksuite/affine-block-database';
 import type {
@@ -142,6 +143,15 @@ function isEmptyValue(value: unknown): boolean {
   return false;
 }
 
+export function isTitlePropertyName(name: string): boolean {
+  const normalized = name.trim().toLowerCase();
+  return normalized === 'name' || normalized === 'title';
+}
+
+function resolveLinkedDocTitle(ctx: AutomationRuntimeContext, docId: string) {
+  return ctx.host.std.workspace.getDoc(docId)?.meta?.title;
+}
+
 function textFromUnknown(value: unknown): string {
   if (value == null) return '';
   if (value instanceof Text) return value.toString();
@@ -223,10 +233,9 @@ export function evaluateExpression(
       return { kind: 'empty' };
     }
     case 'property': {
-      const propertyId =
-        node.name === 'Name' || node.name === 'title'
-          ? 'title'
-          : resolver.getPropertyIdByName(ctx.sourceDataSource, node.name);
+      const propertyId = isTitlePropertyName(node.name)
+        ? 'title'
+        : resolver.getPropertyIdByName(ctx.sourceDataSource, node.name);
       if (!propertyId) return { kind: 'empty' };
       const value = resolver.getCellValue(
         ctx.sourceDataSource,
@@ -238,11 +247,9 @@ export function evaluateExpression(
           ctx.source.rowId,
           ctx.sourceDataSource
         );
-        const plain = text?.toString() ?? '';
-        const docId = text ? getSingleDocIdFromText(text) : undefined;
-        if (docId) {
-          return { kind: 'linked_doc', docId, title: plain || undefined };
-        }
+        const plain = getPlainTextFromText(text, docId =>
+          resolveLinkedDocTitle(ctx, docId)
+        ).trim();
         return plain ? { kind: 'text', value: plain } : { kind: 'empty' };
       }
       if (isEmptyValue(value)) return { kind: 'empty' };

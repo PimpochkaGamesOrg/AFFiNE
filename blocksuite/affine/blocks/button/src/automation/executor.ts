@@ -12,6 +12,7 @@ import {
   createRuntimeContext,
   evaluateExpression,
   evaluateExpressionAsString,
+  isTitlePropertyName,
   resolveSourceContext,
   setCellFromEvaluated,
 } from './expression.js';
@@ -206,10 +207,9 @@ async function executeAddPage(
   }
 
   for (const [propertyName, expr] of Object.entries(action.properties)) {
-    const propertyId =
-      propertyName === 'Name' || propertyName === 'title'
-        ? 'title'
-        : resolver.getPropertyIdByName(target.dataSource, propertyName);
+    const propertyId = isTitlePropertyName(propertyName)
+      ? 'title'
+      : resolver.getPropertyIdByName(target.dataSource, propertyName);
     if (!propertyId) continue;
     const evaluated = evaluateExpression(expr, ctx, resolver);
     setCellFromEvaluated(
@@ -247,10 +247,9 @@ async function executeEdit(
   }
 
   for (const [propertyName, expr] of Object.entries(action.properties)) {
-    const propertyId =
-      propertyName === 'Name' || propertyName === 'title'
-        ? 'title'
-        : resolver.getPropertyIdByName(ctx.sourceDataSource, propertyName);
+    const propertyId = isTitlePropertyName(propertyName)
+      ? 'title'
+      : resolver.getPropertyIdByName(ctx.sourceDataSource, propertyName);
     if (!propertyId) {
       return {
         status: 'error',

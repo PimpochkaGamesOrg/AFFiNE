@@ -28,3 +28,20 @@ export const isPureText = (text?: Text): boolean => {
   if (!deltas) return true;
   return deltas.every(v => !isLinkedDoc(v));
 };
+
+export const getPlainTextFromText = (
+  text: Text | undefined,
+  resolveLinkedDocTitle?: (docId: string) => string | undefined
+): string => {
+  const deltas = text?.deltas$.value;
+  if (!deltas) return '';
+  return deltas
+    .map(delta => {
+      if (isLinkedDoc(delta)) {
+        const linkedDocId = delta.attributes?.reference?.pageId as string;
+        return resolveLinkedDocTitle?.(linkedDocId) ?? '';
+      }
+      return String(delta.insert ?? '');
+    })
+    .join('');
+};

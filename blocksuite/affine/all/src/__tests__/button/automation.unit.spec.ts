@@ -3,6 +3,7 @@ import {
   findSourceRowForDocInDatabase,
   parseFormula,
 } from '@blocksuite/affine-block-button';
+import { getPlainTextFromText } from '@blocksuite/affine-block-database';
 import {
   DatabaseBlockSchemaExtension,
   NoteBlockSchemaExtension,
@@ -76,7 +77,7 @@ function createDatabaseWithLinkedPage(input: {
   } satisfies AffineTextAttributes as BaseTextAttributes);
   row.text.insert(` ${input.linkedTitle}`, 1);
 
-  return { store, databaseId };
+  return { store, databaseId, rowId };
 }
 
 describe('button automation database utils', () => {
@@ -195,5 +196,41 @@ describe('button automation formula parser', () => {
         { type: 'literal', value: ' ENGLISH VERSION' },
       ],
     });
+  });
+});
+
+describe('button automation title plain text', () => {
+  test('getPlainTextFromText resolves linked page title as plain text', () => {
+    const idGenerator = createAutoIncrementIdGenerator();
+    const workspace = new TestWorkspace({ id: 'ws-title', idGenerator });
+    workspace.meta.initialize();
+
+    createLinkedPageStore({
+      workspace,
+      pageDocId: 'page-title',
+      pageTitle: 'Даю мультяшным котам покушать',
+    });
+    const { store, rowId } = createDatabaseWithLinkedPage({
+      workspace,
+      databaseDocId: 'db-title',
+      linkedDocId: 'page-title',
+      linkedTitle: 'Даю мультяшным котам покушать',
+    });
+
+    const rowText = store.getBlock(rowId)?.model?.text;
+    rowText?.clear();
+    rowText?.insert(REFERENCE_NODE, 0, {
+      reference: {
+        type: 'LinkedPage',
+        pageId: 'page-title',
+      },
+    } satisfies AffineTextAttributes as BaseTextAttributes);
+
+    expect(
+      getPlainTextFromText(
+        rowText,
+        docId => workspace.getDoc(docId)?.meta?.title
+      )
+    ).toBe('Даю мультяшным котам покушать');
   });
 });
