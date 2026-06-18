@@ -10,7 +10,7 @@ import {
   ToggleRightIcon,
 } from '@blocksuite/icons/lit';
 import { ShadowlessElement } from '@blocksuite/std';
-import { effect, signal } from '@preact/signals-core';
+import { signal } from '@preact/signals-core';
 import { cssVarV2 } from '@toeverything/theme/v2';
 import { css, html, nothing, unsafeCSS } from 'lit';
 import { property, query } from 'lit/decorators.js';
@@ -19,14 +19,9 @@ import { repeat } from 'lit/directives/repeat.js';
 import { GroupTitle } from '../../../core/group-by/group-title.js';
 import type { Group } from '../../../core/group-by/trait.js';
 import type { Row } from '../../../core/index.js';
-import { createDndContext } from '../../../core/utils/wc-dnd/dnd-context.js';
-import { defaultActivators } from '../../../core/utils/wc-dnd/sensors/index.js';
-import { linearMove } from '../../../core/utils/wc-dnd/utils/linear-move.js';
 import { getCollapsedState, setCollapsedState } from '../collapsed-state.js';
 import { LEFT_TOOL_BAR_WIDTH } from '../consts.js';
 import { TableViewAreaSelection } from '../selection';
-import { DataViewColumnPreview } from './header/column-renderer.js';
-import { getVerticalIndicator } from './header/vertical-indicator.js';
 import type { TableViewUILogic } from './table-view-ui-logic.js';
 
 const styles = css`
@@ -235,100 +230,12 @@ export class TableGroup extends SignalWatcher(
   @property({ attribute: false })
   accessor group: Group | undefined = undefined;
 
-  dndContext = createDndContext({
-    activators: defaultActivators,
-    container: this,
-    modifiers: [
-      ({ transform }) => {
-        return {
-          ...transform,
-          y: 0,
-        };
-      },
-    ],
-    onDragEnd: ({ over, active }) => {
-      if (over && over.id !== active.id) {
-        const activeIndex = this.view.properties$.value.findIndex(
-          data => data.id === active.id
-        );
-        const overIndex = this.view.properties$.value.findIndex(
-          data => data.id === over.id
-        );
-        this.view.propertyGetOrCreate(active.id).move({
-          before: activeIndex > overIndex,
-          id: over.id,
-        });
-      }
-    },
-    collisionDetection: linearMove(true),
-    createOverlay: active => {
-      const column = this.view.propertyGetOrCreate(active.id);
-      const preview = new DataViewColumnPreview();
-      preview.column = column;
-      preview.group = this.group;
-      preview.container = this;
-      preview.tableViewLogic = this.tableViewLogic;
-      preview.style.position = 'absolute';
-      preview.style.zIndex = '999';
-      const scale = this.dndContext.scale$.value;
-      const offsetParentRect = this.offsetParent?.getBoundingClientRect();
-      if (!offsetParentRect) {
-        return;
-      }
-      preview.style.width = `${column.width$.value}px`;
-      preview.style.top = `${(active.rect.top - offsetParentRect.top - 1) / scale.y}px`;
-      preview.style.left = `${(active.rect.left - offsetParentRect.left) / scale.x}px`;
-      const cells = Array.from(
-        this.querySelectorAll(`[data-column-id="${active.id}"]`)
-      ) as HTMLElement[];
-      cells.forEach(ele => {
-        ele.style.opacity = '0.1';
-      });
-      this.append(preview);
-      return {
-        overlay: preview,
-        cleanup: () => {
-          preview.remove();
-          cells.forEach(ele => {
-            ele.style.opacity = '1';
-          });
-        },
-      };
-    },
-  });
-
-  showIndicator = () => {
-    const columnMoveIndicator = getVerticalIndicator();
-    this.disposables.add(
-      effect(() => {
-        const active = this.dndContext.active$.value;
-        const over = this.dndContext.over$.value;
-        if (!active || !over) {
-          columnMoveIndicator.remove();
-          return;
-        }
-        const scrollX = this.dndContext.scrollOffset$.value.x;
-        const bottom =
-          this.rowsContainer?.getBoundingClientRect().bottom ??
-          this.getBoundingClientRect().bottom;
-        const left =
-          over.rect.left < active.rect.left ? over.rect.left : over.rect.right;
-        const height = bottom - over.rect.top;
-        columnMoveIndicator.display(left - scrollX, over.rect.top, height);
-      })
-    );
-  };
-
   get rows() {
     return this.group?.rows ?? this.view.rows$.value;
   }
 
   private renderRows(rows: Row[]) {
     return html`
-      <affine-database-column-header
-        .renderGroupHeader=${this.renderGroupHeader}
-        .tableViewLogic=${this.tableViewLogic}
-      ></affine-database-column-header>
       <div class="affine-database-block-rows">
         ${repeat(
           rows,
@@ -379,13 +286,15 @@ export class TableGroup extends SignalWatcher(
   override connectedCallback(): void {
     super.connectedCallback();
     this._loadCollapsedState();
-    this.showIndicator();
   }
 
   override render() {
+    if (this.collapsed$.value) {
+      return this.renderGroupHeader();
+    }
     return html`
-      ${this.collapsed$.value ? this.renderGroupHeader() : nothing}
-      ${this.collapsed$.value ? nothing : this.renderRows(this.rows)}
+      ${this.group ? this.renderGroupHeader() : nothing}
+      ${this.renderRows(this.rows)}
     `;
   }
 

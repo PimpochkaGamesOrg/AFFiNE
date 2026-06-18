@@ -5,7 +5,7 @@ import {
 } from '@blocksuite/affine-components/context-menu';
 import type { InsertToPosition } from '@blocksuite/affine-shared/utils';
 import { AddCursorIcon } from '@blocksuite/icons/lit';
-import { signal } from '@preact/signals-core';
+import { effect, signal } from '@preact/signals-core';
 import type { TemplateResult } from 'lit';
 import { ref } from 'lit/directives/ref.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -17,14 +17,19 @@ import {
   createUniComponentFromWebComponent,
   renderUniLit,
 } from '../../../core/index.js';
+import { createDndContext } from '../../../core/utils/wc-dnd/dnd-context.js';
+import { defaultActivators } from '../../../core/utils/wc-dnd/sensors/index.js';
+import { linearMove } from '../../../core/utils/wc-dnd/utils/linear-move.js';
 import {
   DataViewUIBase,
   DataViewUILogicBase,
 } from '../../../core/view/data-view-base.js';
 import type { TableViewSelectionWithType } from '../selection';
+import type { TableSingleView } from '../table-view-manager.js';
 import {
   getTableViewportStyle,
   renderTableViewportResizeHandle,
+  tableStickyColumnHeaderStyle,
   TableViewportResizeController,
   tableViewportWrapperStyle,
 } from '../table-viewport.js';
@@ -33,6 +38,8 @@ import { TableClipboardController } from './controller/clipboard.js';
 import { TableDragController } from './controller/drag.js';
 import { TableHotkeysController } from './controller/hotkeys.js';
 import { TableSelectionController } from './controller/selection.js';
+import { DataViewColumnPreview } from './header/column-renderer.js';
+import { getVerticalIndicator } from './header/vertical-indicator.js';
 import {
   addGroupIconStyle,
   addGroupStyle,
@@ -139,6 +146,68 @@ export class TableViewUILogic extends DataViewUILogicBase<
 }
 
 export class TableViewUI extends DataViewUIBase<TableViewUILogic> {
+  columnDndContext = createDndContext({
+    activators: defaultActivators,
+    container: this,
+    modifiers: [
+      ({ transform }) => {
+        return {
+          ...transform,
+          y: 0,
+        };
+      },
+    ],
+    onDragEnd: ({ over, active }) => {
+      if (over && over.id !== active.id) {
+        const view = this.logic.view;
+        const activeIndex = view.properties$.value.findIndex(
+          data => data.id === active.id
+        );
+        const overIndex = view.properties$.value.findIndex(
+          data => data.id === over.id
+        );
+        view.propertyGetOrCreate(active.id).move({
+          before: activeIndex > overIndex,
+          id: over.id,
+        });
+      }
+    },
+    collisionDetection: linearMove(true),
+    createOverlay: active => {
+      const column = this.logic.view.propertyGetOrCreate(active.id);
+      const preview = new DataViewColumnPreview();
+      preview.column = column;
+      preview.container = this.logic.tableContainer$.value ?? this;
+      preview.tableViewLogic = this.logic;
+      preview.style.position = 'absolute';
+      preview.style.zIndex = '999';
+      const scale = this.columnDndContext.scale$.value;
+      const offsetParentRect = this.offsetParent?.getBoundingClientRect();
+      if (!offsetParentRect) {
+        return;
+      }
+      preview.style.width = `${column.width$.value}px`;
+      preview.style.top = `${(active.rect.top - offsetParentRect.top - 1) / scale.y}px`;
+      preview.style.left = `${(active.rect.left - offsetParentRect.left) / scale.x}px`;
+      const cells = Array.from(
+        this.querySelectorAll(`[data-column-id="${active.id}"]`)
+      ) as HTMLElement[];
+      cells.forEach(ele => {
+        ele.style.opacity = '0.1';
+      });
+      this.append(preview);
+      return {
+        overlay: preview,
+        cleanup: () => {
+          preview.remove();
+          cells.forEach(ele => {
+            ele.style.opacity = '1';
+          });
+        },
+      };
+    },
+  });
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.logic.ui$.value = this;
@@ -148,6 +217,25 @@ export class TableViewUI extends DataViewUIBase<TableViewUILogic> {
     this.logic.selectionController.hostConnected();
     this.classList.add('affine-database-table', tableViewStyle);
     this.dataset['testid'] = 'dv-table-view';
+    this.disposables.add(
+      effect(() => {
+        const active = this.columnDndContext.active$.value;
+        const over = this.columnDndContext.over$.value;
+        const columnMoveIndicator = getVerticalIndicator();
+        if (!active || !over) {
+          columnMoveIndicator.remove();
+          return;
+        }
+        const scrollX = this.columnDndContext.scrollOffset$.value.x;
+        const bottom =
+          this.logic.tableContainer$.value?.getBoundingClientRect().bottom ??
+          this.getBoundingClientRect().bottom;
+        const left =
+          over.rect.left < active.rect.left ? over.rect.left : over.rect.right;
+        const height = bottom - over.rect.top;
+        columnMoveIndicator.display(left - scrollX, over.rect.top, height);
+      })
+    );
   }
 
   private renderTable() {
@@ -186,7 +274,8 @@ export class TableViewUI extends DataViewUIBase<TableViewUILogic> {
       paddingLeft: `${vPadding}px`,
       paddingRight: `${vPadding}px`,
     });
-    const viewportHeight = this.logic.viewportResizeController.effectiveHeight$.value;
+    const viewportHeight =
+      this.logic.viewportResizeController.effectiveHeight$.value;
     const viewportStyle = getTableViewportStyle(viewportHeight);
     return html`
       ${this.logic.headerWidget
@@ -202,6 +291,14 @@ export class TableViewUI extends DataViewUIBase<TableViewUILogic> {
             style="${viewportStyle}"
             @wheel="${this.logic.onWheel}"
           >
+            <div
+              class="${tableStickyColumnHeaderStyle}"
+              style="${containerStyle}"
+            >
+              <affine-database-column-header
+                .tableViewLogic="${this.logic}"
+              ></affine-database-column-header>
+            </div>
             <div
               ${ref(this.logic.tableContainer$)}
               class="affine-database-table-container"

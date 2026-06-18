@@ -74,21 +74,32 @@ export class TableVerticalIndicator extends WithDisposable(ShadowlessElement) {
 }
 
 export const getTableGroupRect = (ele: HTMLElement) => {
-  const group = ele.closest('affine-data-view-table-group');
-  if (!group) {
+  const table = ele.closest('dv-table-view-ui');
+  if (!table) {
     return;
   }
-  const groupRect = group?.getBoundingClientRect();
-  const top =
-    group
+  const group = ele.closest('affine-data-view-table-group');
+  const headerTop =
+    table
       .querySelector('.affine-database-column-header')
-      ?.getBoundingClientRect().top ?? groupRect.top;
-  const bottom =
-    group.querySelector('.affine-database-block-rows')?.getBoundingClientRect()
-      .bottom ?? groupRect.bottom;
+      ?.getBoundingClientRect().top ?? ele.getBoundingClientRect().top;
+  if (group) {
+    const groupRect = group.getBoundingClientRect();
+    const bottom =
+      group
+        .querySelector('.affine-database-block-rows')
+        ?.getBoundingClientRect().bottom ?? groupRect.bottom;
+    return {
+      top: headerTop,
+      bottom: bottom,
+    };
+  }
+  const tableContainer = table.querySelector(
+    '.affine-database-table-container'
+  );
   return {
-    top: top,
-    bottom: bottom,
+    top: headerTop,
+    bottom: tableContainer?.getBoundingClientRect().bottom ?? headerTop,
   };
 };
 export const startDragWidthAdjustmentBar = (

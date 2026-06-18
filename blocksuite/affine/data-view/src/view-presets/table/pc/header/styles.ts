@@ -17,9 +17,7 @@ export const styles = css`
     }
 
     .affine-database-column-header {
-        position: sticky;
-        top: 0;
-        z-index: 3;
+        position: relative;
         display: flex;
         flex-direction: row;
         border-bottom: 1px solid ${unsafeCSS(cssVarV2.layer.insideBorder.border)};
