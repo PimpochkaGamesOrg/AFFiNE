@@ -49,6 +49,26 @@ function skipSpace(input: string, index: number) {
   return index;
 }
 
+function skipCalendarEmoji(input: string, index: number) {
+  let i = skipSpace(input, index);
+  const codePoint = input.codePointAt(i);
+  if (codePoint !== 0x1f5d3) {
+    return i;
+  }
+  i += codePoint > 0xffff ? 2 : 1;
+  if (input.codePointAt(i) === 0xfe0f) {
+    i += 1;
+  }
+  return skipSpace(input, i);
+}
+
+function parseDateTriggered(input: string, index: number) {
+  const afterEmoji = skipCalendarEmoji(input, index);
+  const dateTriggeredPos = matchKeyword(input, afterEmoji, 'Date triggered');
+  if (dateTriggeredPos == null) return null;
+  return { expr: { type: 'date_triggered' as const }, next: dateTriggeredPos };
+}
+
 function readIdent(input: string, index: number) {
   let i = index;
   while (i < input.length && isIdentChar(input[i]!)) i += 1;
@@ -255,17 +275,9 @@ function parsePrimary(
     }
   }
 
-  const dateTriggeredPos = matchKeyword(input, i, 'Date triggered');
-  if (dateTriggeredPos != null) {
-    return { expr: { type: 'date_triggered' }, next: dateTriggeredPos };
-  }
-
-  if (input.slice(i, i + 2) === '🗓️') {
-    i += 2;
-    const dt = matchKeyword(input, i, 'Date triggered');
-    if (dt != null) {
-      return { expr: { type: 'date_triggered' }, next: dt };
-    }
+  const dateTriggered = parseDateTriggered(input, i);
+  if (dateTriggered) {
+    return dateTriggered;
   }
 
   if (input[i] === '(') {

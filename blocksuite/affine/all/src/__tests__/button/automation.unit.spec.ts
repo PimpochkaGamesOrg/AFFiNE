@@ -197,6 +197,489 @@ describe('button automation formula parser', () => {
       ],
     });
   });
+
+  test('parses Date triggered', () => {
+    expect(parseFormula('Date triggered')).toEqual({
+      type: 'date_triggered',
+    });
+  });
+
+  test('parses dateRange with Date triggered and property', () => {
+    expect(
+      parseFormula('dateRange(Date triggered, This page.Дедлайн)')
+    ).toEqual({
+      type: 'date_range',
+      start: { type: 'date_triggered' },
+      end: { type: 'property', name: 'Дедлайн' },
+    });
+  });
+
+  test('parses emoji Date triggered inside dateRange', () => {
+    expect(
+      parseFormula('dateRange(🗓️ Date triggered, This page.Дедлайн)')
+    ).toEqual({
+      type: 'date_range',
+      start: { type: 'date_triggered' },
+      end: { type: 'property', name: 'Дедлайн' },
+    });
+  });
+
+  test('parses concat of step page references', () => {
+    expect(parseFormula('Page added in step 2 + Page added in step 3')).toEqual(
+      {
+        type: 'concat',
+        parts: [
+          { type: 'step_result', step: 2 },
+          { type: 'step_result', step: 3 },
+        ],
+      }
+    );
+  });
+});
+
+describe('button automation date values', () => {
+  test('reads AFFiNE date column timestamp as date value', async () => {
+    const { createPropertyResolver, evaluateExpression, setCellFromEvaluated } =
+      await import('@blocksuite/affine-block-button');
+    const { DatabaseBlockDataSource } =
+      await import('@blocksuite/affine-block-database');
+    const { propertyPresets } =
+      await import('@blocksuite/data-view/property-presets');
+
+    const idGenerator = createAutoIncrementIdGenerator();
+    const workspace = new TestWorkspace({ id: 'ws-date', idGenerator });
+    workspace.meta.initialize();
+
+    createLinkedPageStore({
+      workspace,
+      pageDocId: 'page-date',
+      pageTitle: 'Episode',
+    });
+
+    const source = createDatabaseWithLinkedPage({
+      workspace,
+      databaseDocId: 'db-source',
+      linkedDocId: 'page-date',
+      linkedTitle: 'Episode',
+    });
+    const target = createDatabaseWithLinkedPage({
+      workspace,
+      databaseDocId: 'db-target',
+      linkedDocId: 'page-date',
+      linkedTitle: 'Episode',
+    });
+
+    const sourceDataSource = new DatabaseBlockDataSource(
+      source.store.getBlock(source.databaseId)!.model as never
+    );
+    const targetDataSource = new DatabaseBlockDataSource(
+      target.store.getBlock(target.databaseId)!.model as never
+    );
+
+    const sourceDeadlineId = sourceDataSource.propertyAdd('end', {
+      type: propertyPresets.datePropertyConfig.type,
+      name: 'Дедлайн',
+    });
+    const targetPublicationId = targetDataSource.propertyAdd('end', {
+      type: propertyPresets.datePropertyConfig.type,
+      name: 'Публикация',
+    });
+    if (!sourceDeadlineId || !targetPublicationId) {
+      throw new Error('date columns not created');
+    }
+
+    const deadline = Date.parse('2026-06-30T00:00:00.000Z');
+    sourceDataSource.cellValueChange(source.rowId, sourceDeadlineId, deadline);
+
+    const ctx = {
+      host: {
+        store: { id: 'page-date' },
+        std: { workspace },
+      },
+      source: {
+        databaseDocId: 'db-source',
+        databaseBlockId: source.databaseId,
+        rowId: source.rowId,
+      },
+      sourceDataSource,
+      sourceDatabase: source.store.getBlock(source.databaseId)!.model,
+      triggeredAt: new Date('2026-06-19T00:00:00.000Z'),
+      stepResults: new Map(),
+      currentDocId: 'page-date',
+    };
+
+    const evaluated = evaluateExpression(
+      { type: 'property', name: 'Дедлайн' },
+      ctx,
+      createPropertyResolver()
+    );
+
+    expect(evaluated).toEqual({
+      kind: 'date',
+      start: deadline,
+      end: null,
+    });
+
+    const targetRowId = target.store.addBlock(
+      'affine:paragraph',
+      {},
+      target.databaseId
+    );
+    if (!targetRowId) throw new Error('target row not created');
+
+    setCellFromEvaluated(
+      targetRowId,
+      targetPublicationId,
+      targetDataSource,
+      evaluated,
+      {
+        buildDocUrl: () => undefined,
+      } as never,
+      ctx.host
+    );
+
+    expect(
+      targetDataSource.cellValueGet(targetRowId, targetPublicationId)
+    ).toBe(deadline);
+  });
+
+  test('evaluates Date triggered and writes to date column', async () => {
+    const { createPropertyResolver, evaluateExpression, setCellFromEvaluated } =
+      await import('@blocksuite/affine-block-button');
+    const { DatabaseBlockDataSource } =
+      await import('@blocksuite/affine-block-database');
+    const { propertyPresets } =
+      await import('@blocksuite/data-view/property-presets');
+
+    const idGenerator = createAutoIncrementIdGenerator();
+    const workspace = new TestWorkspace({ id: 'ws-triggered', idGenerator });
+    workspace.meta.initialize();
+
+    createLinkedPageStore({
+      workspace,
+      pageDocId: 'page-triggered',
+      pageTitle: 'Episode',
+    });
+
+    const source = createDatabaseWithLinkedPage({
+      workspace,
+      databaseDocId: 'db-triggered-source',
+      linkedDocId: 'page-triggered',
+      linkedTitle: 'Episode',
+    });
+    const target = createDatabaseWithLinkedPage({
+      workspace,
+      databaseDocId: 'db-triggered-target',
+      linkedDocId: 'page-triggered',
+      linkedTitle: 'Episode',
+    });
+
+    const sourceDataSource = new DatabaseBlockDataSource(
+      source.store.getBlock(source.databaseId)!.model as never
+    );
+    const targetDataSource = new DatabaseBlockDataSource(
+      target.store.getBlock(target.databaseId)!.model as never
+    );
+
+    const targetDateId = targetDataSource.propertyAdd('end', {
+      type: propertyPresets.datePropertyConfig.type,
+      name: 'Срок',
+    });
+    if (!targetDateId) throw new Error('date column not created');
+
+    const triggeredAt = new Date('2026-06-19T12:00:00.000Z');
+    const ctx = {
+      host: {
+        store: { id: 'page-triggered' },
+        std: { workspace },
+      },
+      source: {
+        databaseDocId: 'db-triggered-source',
+        databaseBlockId: source.databaseId,
+        rowId: source.rowId,
+      },
+      sourceDataSource,
+      sourceDatabase: source.store.getBlock(source.databaseId)!.model,
+      triggeredAt,
+      stepResults: new Map(),
+      currentDocId: 'page-triggered',
+    };
+
+    const evaluated = evaluateExpression(
+      { type: 'date_triggered' },
+      ctx,
+      createPropertyResolver()
+    );
+
+    expect(evaluated).toEqual({
+      kind: 'date',
+      start: triggeredAt.getTime(),
+      end: null,
+    });
+
+    const targetRowId = target.store.addBlock(
+      'affine:paragraph',
+      {},
+      target.databaseId
+    );
+    if (!targetRowId) throw new Error('target row not created');
+
+    setCellFromEvaluated(
+      targetRowId,
+      targetDateId,
+      targetDataSource,
+      evaluated,
+      { buildDocUrl: () => undefined } as never,
+      ctx.host
+    );
+
+    expect(targetDataSource.cellValueGet(targetRowId, targetDateId)).toBe(
+      triggeredAt.getTime()
+    );
+  });
+
+  test('evaluates dateRange and writes end date to date column', async () => {
+    const { createPropertyResolver, evaluateExpression, setCellFromEvaluated } =
+      await import('@blocksuite/affine-block-button');
+    const { DatabaseBlockDataSource } =
+      await import('@blocksuite/affine-block-database');
+    const { propertyPresets } =
+      await import('@blocksuite/data-view/property-presets');
+
+    const idGenerator = createAutoIncrementIdGenerator();
+    const workspace = new TestWorkspace({ id: 'ws-range', idGenerator });
+    workspace.meta.initialize();
+
+    createLinkedPageStore({
+      workspace,
+      pageDocId: 'page-range',
+      pageTitle: 'Episode',
+    });
+
+    const source = createDatabaseWithLinkedPage({
+      workspace,
+      databaseDocId: 'db-range-source',
+      linkedDocId: 'page-range',
+      linkedTitle: 'Episode',
+    });
+    const target = createDatabaseWithLinkedPage({
+      workspace,
+      databaseDocId: 'db-range-target',
+      linkedDocId: 'page-range',
+      linkedTitle: 'Episode',
+    });
+
+    const sourceDataSource = new DatabaseBlockDataSource(
+      source.store.getBlock(source.databaseId)!.model as never
+    );
+    const targetDataSource = new DatabaseBlockDataSource(
+      target.store.getBlock(target.databaseId)!.model as never
+    );
+
+    const sourceDeadlineId = sourceDataSource.propertyAdd('end', {
+      type: propertyPresets.datePropertyConfig.type,
+      name: 'Дедлайн',
+    });
+    const targetDateId = targetDataSource.propertyAdd('end', {
+      type: propertyPresets.datePropertyConfig.type,
+      name: 'Срок',
+    });
+    if (!sourceDeadlineId || !targetDateId) {
+      throw new Error('date columns not created');
+    }
+
+    const triggeredAt = new Date('2026-06-19T00:00:00.000Z');
+    const deadline = Date.parse('2026-06-30T00:00:00.000Z');
+    sourceDataSource.cellValueChange(source.rowId, sourceDeadlineId, deadline);
+
+    const ctx = {
+      host: {
+        store: { id: 'page-range' },
+        std: { workspace },
+      },
+      source: {
+        databaseDocId: 'db-range-source',
+        databaseBlockId: source.databaseId,
+        rowId: source.rowId,
+      },
+      sourceDataSource,
+      sourceDatabase: source.store.getBlock(source.databaseId)!.model,
+      triggeredAt,
+      stepResults: new Map(),
+      currentDocId: 'page-range',
+    };
+
+    const evaluated = evaluateExpression(
+      {
+        type: 'date_range',
+        start: { type: 'date_triggered' },
+        end: { type: 'property', name: 'Дедлайн' },
+      },
+      ctx,
+      createPropertyResolver()
+    );
+
+    expect(evaluated).toEqual({
+      kind: 'date',
+      start: triggeredAt.getTime(),
+      end: deadline,
+    });
+
+    const targetRowId = target.store.addBlock(
+      'affine:paragraph',
+      {},
+      target.databaseId
+    );
+    if (!targetRowId) throw new Error('target row not created');
+
+    setCellFromEvaluated(
+      targetRowId,
+      targetDateId,
+      targetDataSource,
+      evaluated,
+      { buildDocUrl: () => undefined } as never,
+      ctx.host
+    );
+
+    expect(targetDataSource.cellValueGet(targetRowId, targetDateId)).toBe(
+      deadline
+    );
+  });
+
+  test('evaluates concat of step page references as linked docs', async () => {
+    const { createPropertyResolver, evaluateExpression, setCellFromEvaluated } =
+      await import('@blocksuite/affine-block-button');
+    const { DatabaseBlockDataSource, databaseBlockProperties } =
+      await import('@blocksuite/affine-block-database');
+
+    const idGenerator = createAutoIncrementIdGenerator();
+    const workspace = new TestWorkspace({ id: 'ws-step', idGenerator });
+    workspace.meta.initialize();
+
+    createLinkedPageStore({
+      workspace,
+      pageDocId: 'page-step',
+      pageTitle: 'Episode',
+    });
+    createLinkedPageStore({
+      workspace,
+      pageDocId: 'dev-page-1',
+      pageTitle: 'Dev 1',
+    });
+    createLinkedPageStore({
+      workspace,
+      pageDocId: 'dev-page-2',
+      pageTitle: 'Dev 2',
+    });
+
+    const source = createDatabaseWithLinkedPage({
+      workspace,
+      databaseDocId: 'db-step-source',
+      linkedDocId: 'page-step',
+      linkedTitle: 'Episode',
+    });
+    const devDb = createDatabaseWithLinkedPage({
+      workspace,
+      databaseDocId: 'db-step-dev',
+      linkedDocId: 'dev-page-1',
+      linkedTitle: 'Dev 1',
+    });
+
+    const sourceDataSource = new DatabaseBlockDataSource(
+      source.store.getBlock(source.databaseId)!.model as never
+    );
+    const relationId = sourceDataSource.propertyAdd('end', {
+      type: databaseBlockProperties.richTextColumnConfig.type,
+      name: 'Разработка',
+    });
+    if (!relationId) throw new Error('relation column not created');
+
+    const devRow2 = devDb.store.addBlock(
+      'affine:paragraph',
+      {},
+      devDb.databaseId
+    );
+    if (!devRow2) throw new Error('dev row 2 not created');
+    const devRow2Model = devDb.store.getBlock(devRow2)?.model;
+    devRow2Model?.text?.insert(REFERENCE_NODE, 0, {
+      reference: { type: 'LinkedPage', pageId: 'dev-page-2' },
+    } satisfies AffineTextAttributes as BaseTextAttributes);
+
+    const ctx = {
+      host: {
+        store: { id: 'page-step' },
+        std: { workspace },
+      },
+      source: {
+        databaseDocId: 'db-step-source',
+        databaseBlockId: source.databaseId,
+        rowId: source.rowId,
+      },
+      sourceDataSource,
+      sourceDatabase: source.store.getBlock(source.databaseId)!.model,
+      triggeredAt: new Date('2026-06-19T00:00:00.000Z'),
+      stepResults: new Map([
+        [
+          2,
+          {
+            rowId: devDb.rowId,
+            docId: 'dev-page-1',
+            databaseDocId: 'db-step-dev',
+            databaseBlockId: devDb.databaseId,
+          },
+        ],
+        [
+          3,
+          {
+            rowId: devRow2,
+            docId: 'dev-page-2',
+            databaseDocId: 'db-step-dev',
+            databaseBlockId: devDb.databaseId,
+          },
+        ],
+      ]),
+      currentDocId: 'page-step',
+    };
+
+    const evaluated = evaluateExpression(
+      {
+        type: 'concat',
+        parts: [
+          { type: 'step_result', step: 2 },
+          { type: 'step_result', step: 3 },
+        ],
+      },
+      ctx,
+      createPropertyResolver()
+    );
+
+    expect(evaluated).toEqual({
+      kind: 'linked_docs',
+      docIds: ['dev-page-1', 'dev-page-2'],
+    });
+
+    setCellFromEvaluated(
+      source.rowId,
+      relationId,
+      sourceDataSource,
+      evaluated,
+      { buildDocUrl: () => undefined } as never,
+      ctx.host
+    );
+
+    const cellValue = sourceDataSource.cellValueGet(source.rowId, relationId);
+    expect(cellValue).toBeInstanceOf(Text);
+    const docIds = (cellValue as Text).deltas$.value
+      .filter(
+        (delta: { attributes?: { reference?: { pageId?: string } } }) =>
+          delta.attributes?.reference?.pageId
+      )
+      .map(
+        (delta: { attributes?: { reference?: { pageId?: string } } }) =>
+          delta.attributes!.reference!.pageId
+      );
+    expect(docIds).toEqual(['dev-page-1', 'dev-page-2']);
+  });
 });
 
 describe('button automation title plain text', () => {

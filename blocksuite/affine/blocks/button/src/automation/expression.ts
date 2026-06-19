@@ -133,6 +133,7 @@ export function createRuntimeContext(input: {
 
 function isEmptyValue(value: unknown): boolean {
   if (value == null) return true;
+  if (typeof value === 'number') return Number.isNaN(value);
   if (value instanceof Text) return value.length === 0;
   if (typeof value === 'string') return value.trim().length === 0;
   if (Array.isArray(value)) return value.length === 0;
@@ -141,6 +142,71 @@ function isEmptyValue(value: unknown): boolean {
     return date.start == null;
   }
   return false;
+}
+
+function readDateCellAsEvaluated(
+  value: unknown
+): Extract<EvaluatedValue, { kind: 'date' }> | { kind: 'empty' } {
+  if (value == null || (typeof value === 'number' && Number.isNaN(value))) {
+    return { kind: 'empty' };
+  }
+  if (typeof value === 'number') {
+    return { kind: 'date', start: value, end: null };
+  }
+  if (typeof value === 'object' && 'start' in (value as object)) {
+    const date = value as { start?: number | null; end?: number | null };
+    if (date.start == null) return { kind: 'empty' };
+    return { kind: 'date', start: date.start, end: date.end ?? null };
+  }
+  return { kind: 'empty' };
+}
+
+function parseDateTextToTimestamp(text: string): number | null {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  const parsed = Date.parse(trimmed);
+  if (!Number.isNaN(parsed)) return parsed;
+  return null;
+}
+
+function timestampFromEvaluated(value: EvaluatedValue): number | null {
+  if (value.kind === 'date') {
+    return value.end ?? value.start;
+  }
+  if (value.kind === 'text') {
+    return parseDateTextToTimestamp(value.value);
+  }
+  return null;
+}
+
+function evaluateRawCellValue(
+  value: unknown,
+  propertyType: string | undefined
+): EvaluatedValue {
+  if (isEmptyValue(value)) return { kind: 'empty' };
+  if (propertyType === 'link') {
+    const docId = getSingleDocIdFromText(value as Text);
+    if (docId) return { kind: 'linked_doc', docId };
+  }
+  if (propertyType === 'rich-text') {
+    const docId = getSingleDocIdFromText(value as Text);
+    if (docId) {
+      return { kind: 'linked_doc', docId, title: textFromUnknown(value) };
+    }
+  }
+  if (propertyType === 'select') {
+    return { kind: 'select', optionId: String(value) };
+  }
+  if (propertyType === 'multi-select') {
+    return {
+      kind: 'multi_select',
+      optionIds: Array.isArray(value) ? value.map(String) : [],
+    };
+  }
+  if (propertyType === 'date') {
+    return readDateCellAsEvaluated(value);
+  }
+  return { kind: 'text', value: textFromUnknown(value) };
 }
 
 export function isTitlePropertyName(name: string): boolean {
@@ -156,7 +222,11 @@ function textFromUnknown(value: unknown): string {
   if (value == null) return '';
   if (value instanceof Text) return value.toString();
   if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean') {
+  if (typeof value === 'number') {
+    if (Number.isNaN(value)) return '';
+    return new Date(value).toISOString().slice(0, 10);
+  }
+  if (typeof value === 'boolean') {
     return String(value);
   }
   if (typeof value === 'object' && 'start' in (value as object)) {
@@ -207,11 +277,16 @@ export function evaluateExpression(
       const startVal = evaluateExpression(node.start, ctx, resolver);
       const endVal = evaluateExpression(node.end, ctx, resolver);
       const start =
-        startVal.kind === 'date' ? startVal.start : ctx.triggeredAt.getTime();
+        startVal.kind === 'date'
+          ? startVal.start
+          : (timestampFromEvaluated(startVal) ?? ctx.triggeredAt.getTime());
       let end: number | null = null;
       if (endVal.kind === 'date') {
         end = endVal.end ?? endVal.start;
-      } else if (startVal.kind === 'date' && startVal.end != null) {
+      } else {
+        end = timestampFromEvaluated(endVal);
+      }
+      if (end == null && startVal.kind === 'date' && startVal.end != null) {
         end = startVal.end;
       }
       return { kind: 'date', start, end };
@@ -252,38 +327,11 @@ export function evaluateExpression(
         ).trim();
         return plain ? { kind: 'text', value: plain } : { kind: 'empty' };
       }
-      if (isEmptyValue(value)) return { kind: 'empty' };
       const propertyType = resolver.getPropertyType(
         ctx.sourceDataSource,
         propertyId
       );
-      if (propertyType === 'link') {
-        const docId = getSingleDocIdFromText(value as Text);
-        if (docId) return { kind: 'linked_doc', docId };
-      }
-      if (propertyType === 'rich-text') {
-        const docId = getSingleDocIdFromText(value as Text);
-        if (docId)
-          return { kind: 'linked_doc', docId, title: textFromUnknown(value) };
-      }
-      if (propertyType === 'select') {
-        return { kind: 'select', optionId: String(value) };
-      }
-      if (propertyType === 'multi-select') {
-        return {
-          kind: 'multi_select',
-          optionIds: Array.isArray(value) ? value.map(String) : [],
-        };
-      }
-      if (propertyType === 'date') {
-        const date = value as { start?: number; end?: number | null };
-        return {
-          kind: 'date',
-          start: date.start ?? ctx.triggeredAt.getTime(),
-          end: date.end ?? null,
-        };
-      }
-      return { kind: 'text', value: textFromUnknown(value) };
+      return evaluateRawCellValue(value, propertyType);
     }
     case 'property_of': {
       if (node.base.type === 'this_page') {
@@ -297,24 +345,11 @@ export function evaluateExpression(
           ctx.source.rowId,
           propertyId
         );
-        if (isEmptyValue(value)) return { kind: 'empty' };
         const propertyType = resolver.getPropertyType(
           ctx.sourceDataSource,
           propertyId
         );
-        if (propertyType === 'link') {
-          const docId = getSingleDocIdFromText(value as Text);
-          if (docId) return { kind: 'linked_doc', docId };
-        }
-        if (propertyType === 'date') {
-          const date = value as { start?: number; end?: number | null };
-          return {
-            kind: 'date',
-            start: date.start ?? ctx.triggeredAt.getTime(),
-            end: date.end ?? null,
-          };
-        }
-        return { kind: 'text', value: textFromUnknown(value) };
+        return evaluateRawCellValue(value, propertyType);
       }
       if (node.base.type === 'property') {
         const baseValue = evaluateExpression(node.base, ctx, resolver);
@@ -331,8 +366,11 @@ export function evaluateExpression(
             target.rowId,
             propertyId
           );
-          if (isEmptyValue(value)) return { kind: 'empty' };
-          return { kind: 'text', value: textFromUnknown(value) };
+          const propertyType = resolver.getPropertyType(
+            target.dataSource,
+            propertyId
+          );
+          return evaluateRawCellValue(value, propertyType);
         }
         return baseValue.kind === 'text' ? baseValue : { kind: 'empty' };
       }
@@ -350,8 +388,11 @@ export function evaluateExpression(
         target.rowId,
         propertyId
       );
-      if (isEmptyValue(value)) return { kind: 'empty' };
-      return { kind: 'text', value: textFromUnknown(value) };
+      const propertyType = resolver.getPropertyType(
+        target.dataSource,
+        propertyId
+      );
+      return evaluateRawCellValue(value, propertyType);
     }
     case 'literal':
       return { kind: 'text', value: node.value };
@@ -549,11 +590,19 @@ export function setCellFromEvaluated(
     return;
   }
 
+  if (propertyType === 'date') {
+    const timestamp = timestampFromEvaluated(value);
+    if (timestamp != null) {
+      dataSource.cellValueChange(rowId, propertyId, timestamp);
+    }
+    return;
+  }
+
   if (value.kind === 'date') {
-    dataSource.cellValueChange(rowId, propertyId, {
-      start: value.start,
-      end: value.end ?? null,
-    });
+    const plain = textFromEvaluated(value);
+    if (plain) {
+      dataSource.cellValueChange(rowId, propertyId, new Text(plain));
+    }
     return;
   }
 
@@ -568,6 +617,13 @@ export function setCellFromEvaluated(
   }
 
   if (value.kind === 'text') {
+    if (propertyType === 'date') {
+      const timestamp = parseDateTextToTimestamp(value.value);
+      if (timestamp != null) {
+        dataSource.cellValueChange(rowId, propertyId, timestamp);
+      }
+      return;
+    }
     if (propertyType === 'select') {
       const optionId = resolveSelectOptionId(
         dataSource,
@@ -617,10 +673,8 @@ function clearCellValue(
     case 'number':
     case 'select':
     case 'multi-select':
-      dataSource.cellValueChange(rowId, propertyId, null);
-      return;
     case 'date':
-      dataSource.cellValueChange(rowId, propertyId, { start: null, end: null });
+      dataSource.cellValueChange(rowId, propertyId, null);
       return;
     case 'link':
       dataSource.cellValueChange(rowId, propertyId, '');
