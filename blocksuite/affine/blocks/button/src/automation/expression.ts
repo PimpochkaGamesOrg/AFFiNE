@@ -10,10 +10,12 @@ import type {
 } from '@blocksuite/affine-model';
 import { REFERENCE_NODE } from '@blocksuite/affine-shared/consts';
 import type { AffineTextAttributes } from '@blocksuite/affine-shared/types';
+import { getTagColor } from '@blocksuite/data-view';
 import type { EditorHost } from '@blocksuite/std';
 import {
   type BaseTextAttributes,
   type DeltaInsert,
+  nanoid,
   Text,
 } from '@blocksuite/store';
 
@@ -179,9 +181,32 @@ function timestampFromEvaluated(value: EvaluatedValue): number | null {
   return null;
 }
 
+type SelectOptionData = {
+  options?: { id: string; value: string; color?: string }[];
+};
+
+function readSelectOptionLabels(
+  dataSource: DatabaseBlockDataSource | undefined,
+  propertyId: string | undefined,
+  optionIds: string[]
+): string[] {
+  if (!dataSource || !propertyId) {
+    return optionIds.map(() => '');
+  }
+  const data = dataSource.propertyDataGet(propertyId) as
+    | SelectOptionData
+    | undefined;
+  const optionMap = Object.fromEntries(
+    (data?.options ?? []).map(option => [option.id, option.value])
+  );
+  return optionIds.map(id => optionMap[id] ?? '');
+}
+
 function evaluateRawCellValue(
   value: unknown,
-  propertyType: string | undefined
+  propertyType: string | undefined,
+  dataSource?: DatabaseBlockDataSource,
+  propertyId?: string
 ): EvaluatedValue {
   if (isEmptyValue(value)) return { kind: 'empty' };
   if (propertyType === 'link') {
@@ -195,13 +220,14 @@ function evaluateRawCellValue(
     }
   }
   if (propertyType === 'select') {
-    return { kind: 'select', optionId: String(value) };
+    const optionId = String(value);
+    const [label] = readSelectOptionLabels(dataSource, propertyId, [optionId]);
+    return { kind: 'select', optionId, label };
   }
   if (propertyType === 'multi-select') {
-    return {
-      kind: 'multi_select',
-      optionIds: Array.isArray(value) ? value.map(String) : [],
-    };
+    const optionIds = Array.isArray(value) ? value.map(String) : [];
+    const labels = readSelectOptionLabels(dataSource, propertyId, optionIds);
+    return { kind: 'multi_select', optionIds, labels };
   }
   if (propertyType === 'date') {
     return readDateCellAsEvaluated(value);
@@ -331,7 +357,12 @@ export function evaluateExpression(
         ctx.sourceDataSource,
         propertyId
       );
-      return evaluateRawCellValue(value, propertyType);
+      return evaluateRawCellValue(
+        value,
+        propertyType,
+        ctx.sourceDataSource,
+        propertyId
+      );
     }
     case 'property_of': {
       if (node.base.type === 'this_page') {
@@ -349,7 +380,12 @@ export function evaluateExpression(
           ctx.sourceDataSource,
           propertyId
         );
-        return evaluateRawCellValue(value, propertyType);
+        return evaluateRawCellValue(
+          value,
+          propertyType,
+          ctx.sourceDataSource,
+          propertyId
+        );
       }
       if (node.base.type === 'property') {
         const baseValue = evaluateExpression(node.base, ctx, resolver);
@@ -370,7 +406,12 @@ export function evaluateExpression(
             target.dataSource,
             propertyId
           );
-          return evaluateRawCellValue(value, propertyType);
+          return evaluateRawCellValue(
+            value,
+            propertyType,
+            target.dataSource,
+            propertyId
+          );
         }
         return baseValue.kind === 'text' ? baseValue : { kind: 'empty' };
       }
@@ -392,7 +433,12 @@ export function evaluateExpression(
         target.dataSource,
         propertyId
       );
-      return evaluateRawCellValue(value, propertyType);
+      return evaluateRawCellValue(
+        value,
+        propertyType,
+        target.dataSource,
+        propertyId
+      );
     }
     case 'literal':
       return { kind: 'text', value: node.value };
@@ -480,8 +526,9 @@ function textFromEvaluated(value: EvaluatedValue): string {
     case 'date':
       return new Date(value.start).toISOString().slice(0, 10);
     case 'select':
+      return value.label;
     case 'multi_select':
-      return '';
+      return value.labels.filter(Boolean).join(', ');
     case 'boolean':
       return value.value ? 'true' : 'false';
     case 'empty':
@@ -607,12 +654,31 @@ export function setCellFromEvaluated(
   }
 
   if (value.kind === 'select') {
-    dataSource.cellValueChange(rowId, propertyId, value.optionId);
+    const optionId = resolveSelectOptionId(
+      dataSource,
+      propertyId,
+      value.label,
+      {
+        fallbackOptionId: value.optionId,
+        createIfMissing: true,
+      }
+    );
+    if (optionId) {
+      dataSource.cellValueChange(rowId, propertyId, optionId);
+    }
     return;
   }
 
   if (value.kind === 'multi_select') {
-    dataSource.cellValueChange(rowId, propertyId, value.optionIds);
+    const optionIds = value.labels
+      .map((label, index) =>
+        resolveSelectOptionId(dataSource, propertyId, label, {
+          fallbackOptionId: value.optionIds[index],
+          createIfMissing: true,
+        })
+      )
+      .filter((optionId): optionId is string => Boolean(optionId));
+    dataSource.cellValueChange(rowId, propertyId, optionIds);
     return;
   }
 
@@ -628,7 +694,8 @@ export function setCellFromEvaluated(
       const optionId = resolveSelectOptionId(
         dataSource,
         propertyId,
-        value.value
+        value.value,
+        { createIfMissing: true }
       );
       if (optionId) {
         dataSource.cellValueChange(rowId, propertyId, optionId);
@@ -687,13 +754,43 @@ function clearCellValue(
 export function resolveSelectOptionId(
   dataSource: DatabaseBlockDataSource,
   propertyId: string,
-  label: string
+  label: string,
+  options?: {
+    fallbackOptionId?: string;
+    createIfMissing?: boolean;
+  }
 ): string | undefined {
+  const trimmedLabel = label.trim();
+  if (!trimmedLabel) return undefined;
+
   const data = dataSource.propertyDataGet(propertyId) as
-    | { options?: { id: string; value: string }[] }
+    | SelectOptionData
     | undefined;
-  const option = data?.options?.find(
-    item => item.value.trim().toLowerCase() === label.trim().toLowerCase()
+  const selectOptions = [...(data?.options ?? [])];
+
+  if (options?.fallbackOptionId) {
+    const matchedById = selectOptions.find(
+      item => item.id === options.fallbackOptionId
+    );
+    if (matchedById) return matchedById.id;
+  }
+
+  const matchedByLabel = selectOptions.find(
+    item => item.value.trim().toLowerCase() === trimmedLabel.toLowerCase()
   );
-  return option?.id;
+  if (matchedByLabel) return matchedByLabel.id;
+
+  if (!options?.createIfMissing && !options?.fallbackOptionId) {
+    return undefined;
+  }
+
+  const newOption = {
+    id: nanoid(),
+    value: trimmedLabel,
+    color: getTagColor(),
+  };
+  dataSource.propertyDataSet(propertyId, {
+    options: [...selectOptions, newOption],
+  });
+  return newOption.id;
 }

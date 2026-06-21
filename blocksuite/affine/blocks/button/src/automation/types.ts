@@ -29,8 +29,8 @@ export type EvaluatedValue =
   | { kind: 'linked_doc'; docId: string; title?: string }
   | { kind: 'linked_docs'; docIds: string[] }
   | { kind: 'date'; start: number; end?: number | null }
-  | { kind: 'select'; optionId: string }
-  | { kind: 'multi_select'; optionIds: string[] }
+  | { kind: 'select'; optionId: string; label: string }
+  | { kind: 'multi_select'; optionIds: string[]; labels: string[] }
   | { kind: 'boolean'; value: boolean }
   | { kind: 'empty' }
   | { kind: 'unknown'; value: unknown };

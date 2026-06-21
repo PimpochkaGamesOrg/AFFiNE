@@ -546,6 +546,129 @@ describe('button automation date values', () => {
     );
   });
 
+  test('maps select property by label when syncing across databases', async () => {
+    const { createPropertyResolver, evaluateExpression, setCellFromEvaluated } =
+      await import('@blocksuite/affine-block-button');
+    const { DatabaseBlockDataSource } =
+      await import('@blocksuite/affine-block-database');
+    const { propertyPresets } =
+      await import('@blocksuite/data-view/property-presets');
+    const { nanoid } = await import('@blocksuite/store');
+
+    const idGenerator = createAutoIncrementIdGenerator();
+    const workspace = new TestWorkspace({ id: 'ws-select', idGenerator });
+    workspace.meta.initialize();
+
+    createLinkedPageStore({
+      workspace,
+      pageDocId: 'page-select',
+      pageTitle: 'Episode',
+    });
+
+    const source = createDatabaseWithLinkedPage({
+      workspace,
+      databaseDocId: 'db-select-source',
+      linkedDocId: 'page-select',
+      linkedTitle: 'Episode',
+    });
+    const target = createDatabaseWithLinkedPage({
+      workspace,
+      databaseDocId: 'db-select-target',
+      linkedDocId: 'page-select',
+      linkedTitle: 'Episode',
+    });
+
+    const sourceDataSource = new DatabaseBlockDataSource(
+      source.store.getBlock(source.databaseId)!.model as never
+    );
+    const targetDataSource = new DatabaseBlockDataSource(
+      target.store.getBlock(target.databaseId)!.model as never
+    );
+
+    const sourceRubricId = sourceDataSource.propertyAdd('end', {
+      type: propertyPresets.selectPropertyConfig.type,
+      name: 'Рубрика',
+    });
+    const targetRubricId = targetDataSource.propertyAdd('end', {
+      type: propertyPresets.selectPropertyConfig.type,
+      name: 'Рубрика',
+    });
+    if (!sourceRubricId || !targetRubricId) {
+      throw new Error('select columns not created');
+    }
+
+    const sourceOptionId = nanoid();
+    sourceDataSource.propertyDataSet(sourceRubricId, {
+      options: [{ id: sourceOptionId, value: 'Новости', color: 'blue' }],
+    });
+    sourceDataSource.cellValueChange(
+      source.rowId,
+      sourceRubricId,
+      sourceOptionId
+    );
+
+    const ctx = {
+      host: {
+        store: { id: 'page-select' },
+        std: { workspace },
+      },
+      source: {
+        databaseDocId: 'db-select-source',
+        databaseBlockId: source.databaseId,
+        rowId: source.rowId,
+      },
+      sourceDataSource,
+      sourceDatabase: source.store.getBlock(source.databaseId)!.model,
+      triggeredAt: new Date('2026-06-19T00:00:00.000Z'),
+      stepResults: new Map(),
+      currentDocId: 'page-select',
+    };
+
+    const evaluated = evaluateExpression(
+      { type: 'property', name: 'Рубрика' },
+      ctx,
+      createPropertyResolver()
+    );
+
+    expect(evaluated).toEqual({
+      kind: 'select',
+      optionId: sourceOptionId,
+      label: 'Новости',
+    });
+
+    const targetRowId = target.store.addBlock(
+      'affine:paragraph',
+      {},
+      target.databaseId
+    );
+    if (!targetRowId) throw new Error('target row not created');
+
+    setCellFromEvaluated(
+      targetRowId,
+      targetRubricId,
+      targetDataSource,
+      evaluated,
+      { buildDocUrl: () => undefined } as never,
+      ctx.host
+    );
+
+    const targetOptionId = targetDataSource.cellValueGet(
+      targetRowId,
+      targetRubricId
+    );
+    expect(targetOptionId).toBeTruthy();
+    expect(targetOptionId).not.toBe(sourceOptionId);
+
+    const targetOptions = (
+      targetDataSource.propertyDataGet(targetRubricId) as {
+        options?: { id: string; value: string }[];
+      }
+    ).options;
+    expect(
+      targetOptions?.find(option => option.id === targetOptionId)?.value
+    ).toBe('Новости');
+  });
+
   test('evaluates concat of step page references as linked docs', async () => {
     const { createPropertyResolver, evaluateExpression, setCellFromEvaluated } =
       await import('@blocksuite/affine-block-button');
