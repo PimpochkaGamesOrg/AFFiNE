@@ -7,9 +7,12 @@ import type {
 } from '@blocksuite/affine-model';
 import type { EditorHost } from '@blocksuite/std';
 
+import { executeColorCharactersAction } from './character-coloring.js';
+import { executeCreateGoogleDriveFoldersAction } from './create-google-drive-folders.js';
 import {
   createPropertyResolver,
   createRuntimeContext,
+  ensureRowLinkedDoc,
   evaluateExpression,
   evaluateExpressionAsString,
   isTitlePropertyName,
@@ -160,6 +163,10 @@ async function executeAction(
       return executeAddPage(action, ctx, provider, resolver, stepIndex);
     case 'edit':
       return executeEdit(action, ctx, provider, resolver);
+    case 'color_characters':
+      return executeColorCharacters(ctx);
+    case 'create_google_drive_folders':
+      return executeCreateGoogleDriveFolders(action, ctx, provider, resolver);
     default:
       return { status: 'error', message: 'Unknown action type' };
   }
@@ -222,9 +229,9 @@ async function executeAddPage(
     );
   }
 
-  const linkedDocId = getSingleDocIdFromText(
-    target.dataSource.doc.getBlock(rowId)?.model?.text
-  );
+  const linkedDocId =
+    ensureRowLinkedDoc(rowId, target.dataSource, ctx.host) ??
+    getSingleDocIdFromText(target.dataSource.doc.getBlock(rowId)?.model?.text);
 
   const stepResult: StepResult = {
     rowId,
@@ -265,6 +272,34 @@ async function executeEdit(
       provider,
       ctx.host
     );
+  }
+  return { status: 'continue' };
+}
+
+async function executeColorCharacters(
+  ctx: AutomationRuntimeContext
+): Promise<ActionResult> {
+  const result = executeColorCharactersAction({ host: ctx.host });
+  if (!result.ok) {
+    return { status: 'error', message: result.message };
+  }
+  return { status: 'continue' };
+}
+
+async function executeCreateGoogleDriveFolders(
+  action: Extract<ButtonAction, { type: 'create_google_drive_folders' }>,
+  ctx: AutomationRuntimeContext,
+  provider: ButtonAutomationContextProvider,
+  resolver: ReturnType<typeof createPropertyResolver>
+): Promise<ActionResult> {
+  const result = await executeCreateGoogleDriveFoldersAction({
+    action,
+    ctx,
+    provider,
+    resolver,
+  });
+  if (!result.ok) {
+    return { status: 'error', message: result.message };
   }
   return { status: 'continue' };
 }

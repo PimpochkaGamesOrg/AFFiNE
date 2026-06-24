@@ -10,8 +10,10 @@ import type {
   ButtonAutomationConfig,
   ButtonBlockModel,
   ButtonConfirmAction,
+  ButtonCreateGoogleDriveFoldersAction,
   ButtonEditAction,
   ButtonValueExpression,
+  GoogleDriveFoldersUrlField,
 } from '@blocksuite/affine-model';
 import { DeleteIcon, PlusIcon } from '@blocksuite/icons/lit';
 import { ShadowlessElement } from '@blocksuite/std';
@@ -24,7 +26,9 @@ import { repeat } from 'lit/directives/repeat.js';
 import {
   cloneConfig,
   createEmptyAddPageAction,
+  createEmptyColorCharactersAction,
   createEmptyConfirmAction,
+  createEmptyCreateGoogleDriveFoldersAction,
   createEmptyEditAction,
   getWorkspaceDatabases,
   type WorkspaceDatabase,
@@ -266,6 +270,18 @@ export class ButtonConfigPanel extends ShadowlessElement {
               this._addAction('edit');
             },
           }),
+          menu.action({
+            name: 'Color characters',
+            select: () => {
+              this._addAction('color_characters');
+            },
+          }),
+          menu.action({
+            name: 'Create Google Drive folders',
+            select: () => {
+              this._addAction('create_google_drive_folders');
+            },
+          }),
         ],
       },
     });
@@ -285,6 +301,14 @@ export class ButtonConfigPanel extends ShadowlessElement {
           index,
           rowsFromProperties(action.properties)
         );
+        return;
+      }
+      if (type === 'color_characters') {
+        draft.actions.push(createEmptyColorCharactersAction());
+        return;
+      }
+      if (type === 'create_google_drive_folders') {
+        draft.actions.push(createEmptyCreateGoogleDriveFoldersAction());
         return;
       }
       const editAction = createEmptyEditAction();
@@ -413,11 +437,18 @@ export class ButtonConfigPanel extends ShadowlessElement {
     `;
   }
 
+  private _getPreviousAddPageSteps(beforeIndex: number): number[] {
+    return this.draft.actions
+      .slice(0, beforeIndex)
+      .map((action, index) => ({ action, step: index + 1 }))
+      .filter(({ action }) => action.type === 'add_page')
+      .map(({ step }) => step);
+  }
+
   private _renderPropertyRows(
     rows: PropertyRow[],
-    index: number,
     sync: (rows: PropertyRow[]) => void,
-    stepCount: number
+    addPageSteps: number[]
   ) {
     return html`
       ${repeat(
@@ -440,7 +471,7 @@ export class ButtonConfigPanel extends ShadowlessElement {
             />
             <affine-button-formula-editor
               .value=${row.value}
-              .stepCount=${stepCount}
+              .addPageSteps=${addPageSteps}
               placeholder="Value formula"
               .onChange=${(value: ButtonValueExpression) => {
                 sync(
@@ -500,7 +531,7 @@ export class ButtonConfigPanel extends ShadowlessElement {
 
         <affine-button-formula-editor
           .value=${action.message}
-          .stepCount=${index}
+          .addPageSteps=${this._getPreviousAddPageSteps(index)}
           placeholder='e.g. if(empty(This page.Field), "Continue?", "Already set?")'
           .onChange=${(value: ButtonValueExpression) => {
             this._updateAction(index, act => {
@@ -559,9 +590,8 @@ export class ButtonConfigPanel extends ShadowlessElement {
         ${this._renderDatabaseSelect(action, index)}
         ${this._renderPropertyRows(
           rows,
-          index,
           r => this._syncPropertyRows(index, r),
-          index
+          this._getPreviousAddPageSteps(index)
         )}
       </div>
     `;
@@ -585,10 +615,150 @@ export class ButtonConfigPanel extends ShadowlessElement {
         </div>
         ${this._renderPropertyRows(
           rows,
-          index,
           r => this._syncEditRows(index, r),
-          this.draft.actions.length
+          this._getPreviousAddPageSteps(index)
         )}
+      </div>
+    `;
+  }
+
+  private _renderColorCharacters(index: number) {
+    return html`
+      <div style=${actionCardStyle}>
+        <div style=${headerRowStyle}>
+          <div>
+            <div style=${actionTagStyle}>Color characters</div>
+            <div style="font-size:13px;font-weight:600;">Scenario dialogue</div>
+          </div>
+          <button
+            style=${smallBtnStyle}
+            @click=${() => this._removeAction(index)}
+          >
+            Remove
+          </button>
+        </div>
+        <div style="opacity:0.55;font-size:12px;">
+          Colors dialogue blocks on this page. Main characters use fixed colors;
+          others get a free palette color.
+        </div>
+      </div>
+    `;
+  }
+
+  private _renderCreateGoogleDriveFolders(
+    action: ButtonCreateGoogleDriveFoldersAction,
+    index: number
+  ) {
+    const addPageSteps = this._getPreviousAddPageSteps(index);
+    return html`
+      <div style=${actionCardStyle}>
+        <div style=${headerRowStyle}>
+          <div>
+            <div style=${actionTagStyle}>Google Drive</div>
+            <div style="font-size:13px;font-weight:600;">
+              Create episode folders
+            </div>
+          </div>
+          <button
+            style=${smallBtnStyle}
+            @click=${() => this._removeAction(index)}
+          >
+            Remove
+          </button>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <div style=${labelStyle}>Episode title</div>
+          <affine-button-formula-editor
+            .value=${action.episodeTitle}
+            .addPageSteps=${addPageSteps}
+            placeholder="e.g. Name"
+            .onChange=${(value: ButtonValueExpression) => {
+              this._updateAction(index, act => {
+                (act as ButtonCreateGoogleDriveFoldersAction).episodeTitle =
+                  value;
+              });
+            }}
+          ></affine-button-formula-editor>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <div style=${labelStyle}>Category (rubric)</div>
+          <affine-button-formula-editor
+            .value=${action.categoryName}
+            .addPageSteps=${addPageSteps}
+            placeholder='e.g. if(empty(Рубрика), "Без рубрики", Рубрика)'
+            .onChange=${(value: ButtonValueExpression) => {
+              this._updateAction(index, act => {
+                (act as ButtonCreateGoogleDriveFoldersAction).categoryName =
+                  value;
+              });
+            }}
+          ></affine-button-formula-editor>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <div style=${labelStyle}>Parent folder ID (optional)</div>
+          <affine-button-formula-editor
+            .value=${action.parentFolderId ?? { type: 'literal', value: '' }}
+            .addPageSteps=${addPageSteps}
+            placeholder="Override root series folder ID"
+            .onChange=${(value: ButtonValueExpression) => {
+              this._updateAction(index, act => {
+                const drive = act as ButtonCreateGoogleDriveFoldersAction;
+                if (value.type === 'literal' && !value.value.trim()) {
+                  drive.parentFolderId = undefined;
+                  return;
+                }
+                drive.parentFolderId = value;
+              });
+            }}
+          ></affine-button-formula-editor>
+        </div>
+
+        <div
+          style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;"
+        >
+          <div>
+            <div style=${labelStyle}>Write link to property</div>
+            <input
+              style=${inputStyle}
+              .value=${action.targetProperty}
+              placeholder="Google Drive"
+              @input=${(e: Event) => {
+                const value = (e.target as HTMLInputElement).value;
+                this._updateAction(index, act => {
+                  (act as ButtonCreateGoogleDriveFoldersAction).targetProperty =
+                    value;
+                });
+              }}
+            />
+          </div>
+          <div>
+            <div style=${labelStyle}>Link from response</div>
+            <select
+              style=${inputStyle}
+              .value=${action.resultUrlField ?? 'episodeFolderUrl'}
+              @change=${(e: Event) => {
+                const value = (e.target as HTMLSelectElement)
+                  .value as GoogleDriveFoldersUrlField;
+                this._updateAction(index, act => {
+                  (act as ButtonCreateGoogleDriveFoldersAction).resultUrlField =
+                    value;
+                });
+              }}
+            >
+              <option value="episodeFolderUrl">Episode folder</option>
+              <option value="categoryFolderUrl">Category folder</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="opacity:0.55;font-size:12px;">
+          Uses Google OAuth from admin settings and creates folders directly via
+          Google Drive API. On first run you will be asked to authorize Drive
+          access; tokens are stored on the server until they expire.
+        </div>
       </div>
     `;
   }
@@ -596,6 +766,12 @@ export class ButtonConfigPanel extends ShadowlessElement {
   private _renderAction(action: ButtonAction, index: number) {
     if (action.type === 'confirm') return this._renderConfirm(action, index);
     if (action.type === 'add_page') return this._renderAddPage(action, index);
+    if (action.type === 'color_characters') {
+      return this._renderColorCharacters(index);
+    }
+    if (action.type === 'create_google_drive_folders') {
+      return this._renderCreateGoogleDriveFolders(action, index);
+    }
     return this._renderEdit(action, index);
   }
 

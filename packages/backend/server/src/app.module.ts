@@ -57,6 +57,7 @@ import { CalendarModule } from './plugins/calendar';
 import { CaptchaModule } from './plugins/captcha';
 import { CopilotModule, CopilotRealtimeModule } from './plugins/copilot';
 import { GCloudModule } from './plugins/gcloud';
+import { GoogleDriveModule } from './plugins/google-drive';
 import { IndexerModule } from './plugins/indexer';
 import { LicenseModule } from './plugins/license';
 import { NotionModule } from './plugins/notion';
@@ -205,6 +206,7 @@ export function buildAppModule(env: Env) {
       CaptchaModule,
       OAuthModule,
       CalendarModule,
+      GoogleDriveModule,
       TelemetryModule,
       CommentModule,
       AccessTokenModule,

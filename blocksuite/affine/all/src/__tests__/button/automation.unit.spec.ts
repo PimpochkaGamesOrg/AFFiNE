@@ -805,6 +805,56 @@ describe('button automation date values', () => {
   });
 });
 
+describe('button automation linked page creation', () => {
+  test('ensureRowLinkedDoc creates linked page for empty database row', async () => {
+    const { ensureRowLinkedDoc } =
+      await import('@blocksuite/affine-block-button');
+    const { DatabaseBlockDataSource } =
+      await import('@blocksuite/affine-block-database');
+
+    const idGenerator = createAutoIncrementIdGenerator();
+    const workspace = new TestWorkspace({ id: 'ws-linked', idGenerator });
+    workspace.meta.initialize();
+
+    const dbDoc = workspace.createDoc('db-linked');
+    dbDoc.load();
+    const store = dbDoc.getStore({ id: 'db-linked', extensions });
+    const rootId = store.addBlock('affine:page', { title: new Text('DB doc') });
+    const noteId = store.addBlock('affine:note', {}, rootId);
+    const databaseId = store.addBlock(
+      'affine:database',
+      {
+        columns: [],
+        cells: {},
+        titleColumn: 'title',
+      },
+      noteId
+    );
+    const rowId = store.addBlock('affine:paragraph', {}, databaseId);
+    if (!rowId) throw new Error('row not created');
+
+    const dataSource = new DatabaseBlockDataSource(
+      store.getBlock(databaseId)!.model as never
+    );
+    const host = {
+      store: { id: 'db-linked', workspace },
+    } as never;
+
+    const docId = ensureRowLinkedDoc(rowId, dataSource, host);
+    expect(docId).toBeTruthy();
+    expect(workspace.getDoc(docId!)).toBeTruthy();
+
+    const rowText = store.getBlock(rowId)?.model?.text;
+    expect(
+      rowText?.deltas$.value.some(
+        delta =>
+          delta.attributes?.reference?.type === 'LinkedPage' &&
+          delta.attributes?.reference?.pageId === docId
+      )
+    ).toBe(true);
+  });
+});
+
 describe('button automation title plain text', () => {
   test('getPlainTextFromText resolves linked page title as plain text', () => {
     const idGenerator = createAutoIncrementIdGenerator();

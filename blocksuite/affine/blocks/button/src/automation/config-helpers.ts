@@ -1,7 +1,9 @@
 import type {
   ButtonAddPageAction,
   ButtonAutomationConfig,
+  ButtonColorCharactersAction,
   ButtonConfirmAction,
+  ButtonCreateGoogleDriveFoldersAction,
   ButtonEditAction,
 } from '@blocksuite/affine-model';
 
@@ -56,6 +58,26 @@ export function createEmptyEditAction(): ButtonEditAction {
     type: 'edit',
     target: 'this_page',
     properties: {},
+  };
+}
+
+export function createEmptyColorCharactersAction(): ButtonColorCharactersAction {
+  return { type: 'color_characters' };
+}
+
+export function createEmptyCreateGoogleDriveFoldersAction(): ButtonCreateGoogleDriveFoldersAction {
+  return {
+    type: 'create_google_drive_folders',
+    episodeTitle: { type: 'property', name: 'Name' },
+    categoryName: {
+      type: 'if_empty',
+      value: { type: 'property', name: 'Рубрика' },
+      // oxlint-disable-next-line unicorn/no-thenable
+      then: { type: 'literal', value: 'Без рубрики' },
+      else: { type: 'property', name: 'Рубрика' },
+    },
+    targetProperty: 'Google Drive',
+    resultUrlField: 'episodeFolderUrl',
   };
 }
 

@@ -1,4 +1,8 @@
-import { AuthService, PublicUserService } from '@affine/core/modules/cloud';
+import {
+  AuthService,
+  FetchService,
+  PublicUserService,
+} from '@affine/core/modules/cloud';
 import { MemberSearchService } from '@affine/core/modules/permissions';
 import {
   type ViewExtensionContext,
@@ -7,6 +11,7 @@ import {
 import { FrameworkProvider } from '@toeverything/infra';
 import { z } from 'zod';
 
+import { patchButtonAutomationGoogleDrive } from './button-automation-google-drive';
 import { patchUserExtensions } from './user';
 import { patchUserListExtensions } from './user-list';
 
@@ -32,10 +37,12 @@ export class CloudViewExtension extends ViewExtensionProvider<CloudViewOptions> 
     const memberSearchService = framework.get(MemberSearchService);
     const publicUserService = framework.get(PublicUserService);
     const authService = framework.get(AuthService);
+    const fetchService = framework.get(FetchService);
 
     context.register([
       patchUserListExtensions(memberSearchService),
       patchUserExtensions(publicUserService, authService),
+      patchButtonAutomationGoogleDrive(fetchService),
     ]);
   }
 }

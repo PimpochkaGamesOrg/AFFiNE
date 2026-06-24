@@ -58,10 +58,29 @@ export type ButtonEditAction = {
   properties: Record<string, ButtonValueExpression>;
 };
 
+export type ButtonColorCharactersAction = {
+  type: 'color_characters';
+};
+
+export type GoogleDriveFoldersUrlField =
+  | 'episodeFolderUrl'
+  | 'categoryFolderUrl';
+
+export type ButtonCreateGoogleDriveFoldersAction = {
+  type: 'create_google_drive_folders';
+  episodeTitle: ButtonValueExpression;
+  categoryName: ButtonValueExpression;
+  parentFolderId?: ButtonValueExpression;
+  targetProperty: string;
+  resultUrlField?: GoogleDriveFoldersUrlField;
+};
+
 export type ButtonAction =
   | ButtonConfirmAction
   | ButtonAddPageAction
-  | ButtonEditAction;
+  | ButtonEditAction
+  | ButtonColorCharactersAction
+  | ButtonCreateGoogleDriveFoldersAction;
 
 export type ButtonSourceDatabase = {
   databaseDocId: string;

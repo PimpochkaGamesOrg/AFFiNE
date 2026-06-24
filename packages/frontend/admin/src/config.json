@@ -471,6 +471,16 @@
       "link": "https://www.revenuecat.com/docs/"
     }
   },
+  "googleDrive": {
+    "seriesFolderId": {
+      "type": "String",
+      "desc": "Root Google Drive folder ID for the series"
+    },
+    "requestTimeoutMs": {
+      "type": "Number",
+      "desc": "Google Drive API request timeout in milliseconds"
+    }
+  },
   "worker": {
     "allowedOrigin": {
       "type": "Array",

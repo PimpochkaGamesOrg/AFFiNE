@@ -69,6 +69,26 @@ export type ButtonAutomationContextProvider = {
     continueText: string;
     cancelText: string;
   }) => Promise<ConfirmResult>;
+  googleDrive?: {
+    ensureAuthorized: () => Promise<
+      { ok: true } | { ok: false; message: string }
+    >;
+    createFolders: (input: {
+      categoryName: string;
+      episodeTitle: string;
+      parentFolderId?: string;
+    }) => Promise<
+      | {
+          ok: true;
+          data: {
+            status: 'success';
+            episodeFolderUrl?: string;
+            categoryFolderUrl?: string;
+          };
+        }
+      | { ok: false; message: string; authRequired?: boolean }
+    >;
+  };
 };
 
 export const ButtonAutomationContextProviderIdentifier =

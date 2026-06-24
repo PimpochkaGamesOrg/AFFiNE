@@ -27,6 +27,7 @@ import { CopilotWorkspaceConfigModel } from './copilot-workspace';
 import { DocModel } from './doc';
 import { DocUserModel } from './doc-user';
 import { FeatureModel } from './feature';
+import { GoogleDriveCredentialModel } from './google-drive-credential';
 import { HistoryModel } from './history';
 import { MagicLinkOtpModel } from './magic-link-otp';
 import { NotificationModel } from './notification';
@@ -92,6 +93,7 @@ const MODELS = {
   calendarSubscription: CalendarSubscriptionModel,
   calendarEvent: CalendarEventModel,
   calendarEventInstance: CalendarEventInstanceModel,
+  googleDriveCredential: GoogleDriveCredentialModel,
   workspaceCalendar: WorkspaceCalendarModel,
   workspaceAnalytics: WorkspaceAnalyticsModel,
 };

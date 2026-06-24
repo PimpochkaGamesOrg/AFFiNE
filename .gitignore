@@ -91,6 +91,9 @@ packages/frontend/core/public/static/templates
 af
 af.cmd
 *.resolved
+scripts/credentials.json
+youtube-credentials.json
+tokens/
 
 # playwright
 storageState.json

@@ -1,4 +1,6 @@
+export * from './automation/character-coloring.js';
 export * from './automation/config-helpers.js';
+export * from './automation/create-google-drive-folders.js';
 export * from './automation/executor.js';
 export * from './automation/expression.js';
 export * from './automation/formula/index.js';

@@ -36,6 +36,7 @@ model User {
   docPermissions              WorkspaceDocUserRole[]
   connectedAccounts           ConnectedAccount[]
   calendarAccounts            CalendarAccount[]
+  googleDriveCredential       GoogleDriveCredential?
   sessions                    UserSession[]
   aiSessions                  AiSession[]
   appConfigs                  AppConfig[]
@@ -1554,4 +1555,24 @@ model CalendarEventInstance {
   @@unique([calendarEventId, recurrenceId])
   @@index([calendarEventId, startAtUtc])
   @@map("calendar_event_instances")
+}
+
+model GoogleDriveCredential {
+  id                String    @id @default(uuid()) @db.VarChar
+  userId            String    @unique @map("user_id") @db.VarChar
+  providerAccountId String    @map("provider_account_id") @db.VarChar
+  email             String?   @db.VarChar
+  accessToken       String?   @map("access_token") @db.Text
+  refreshToken      String?   @map("refresh_token") @db.Text
+  expiresAt         DateTime? @map("expires_at") @db.Timestamptz(3)
+  scope             String?   @db.Text
+  status            String    @default("active") @db.VarChar
+  lastError         String?   @map("last_error") @db.Text
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([providerAccountId])
+  @@map("google_drive_credentials")
 }

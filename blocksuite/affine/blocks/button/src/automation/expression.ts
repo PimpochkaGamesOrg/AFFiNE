@@ -10,6 +10,7 @@ import type {
 } from '@blocksuite/affine-model';
 import { REFERENCE_NODE } from '@blocksuite/affine-shared/consts';
 import type { AffineTextAttributes } from '@blocksuite/affine-shared/types';
+import { createDefaultDoc } from '@blocksuite/affine-shared/utils';
 import { getTagColor } from '@blocksuite/data-view';
 import type { EditorHost } from '@blocksuite/std';
 import {
@@ -555,6 +556,37 @@ function resolveDatabaseForDoc(
   docId: string
 ): (DatabaseTarget & { rowId?: string }) | undefined {
   return resolveRowForDocInWorkspace(ctx.host, docId);
+}
+
+export function ensureRowLinkedDoc(
+  rowId: string,
+  dataSource: DatabaseBlockDataSource,
+  host: EditorHost
+): string | undefined {
+  const model = dataSource.doc.getBlock(rowId)?.model;
+  if (!model?.text) return undefined;
+
+  const text = model.text as Text;
+  const existing = getSingleDocIdFromText(text);
+  if (existing) return existing;
+
+  const workspace = host.store.workspace;
+  const plainTitle = getPlainTextFromText(
+    text,
+    docId => workspace.getDoc(docId)?.meta?.title
+  ).trim();
+  const docStore = createDefaultDoc(workspace, { title: plainTitle });
+  const docId = docStore.id;
+
+  text.clear();
+  text.insert(REFERENCE_NODE, 0, {
+    reference: {
+      type: 'LinkedPage',
+      pageId: docId,
+    },
+  } satisfies AffineTextAttributes as BaseTextAttributes);
+
+  return docId;
 }
 
 export function setRowTitleFromEvaluated(

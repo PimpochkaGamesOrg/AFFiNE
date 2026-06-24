@@ -100,8 +100,8 @@ export class ButtonFormulaEditor extends ShadowlessElement {
   @property({ attribute: false })
   accessor onChange!: (value: ButtonValueExpression) => void;
 
-  @property({ type: Number })
-  accessor stepCount = 0;
+  @property({ attribute: false })
+  accessor addPageSteps: number[] = [];
 
   @property({ attribute: false })
   accessor placeholder = 'Enter formula...';
@@ -242,17 +242,20 @@ export class ButtonFormulaEditor extends ShadowlessElement {
           >
             + Date triggered
           </button>
-          ${this.stepCount > 0
-            ? html`<button
+          ${repeat(
+            this.addPageSteps,
+            step => step,
+            step =>
+              html`<button
                 style=${insertBtnStyle}
                 @click=${(e: Event) => {
                   e.stopPropagation();
-                  this._insertSnippet(`Page added in step ${this.stepCount}`);
+                  this._insertSnippet(`Page added in step ${step}`);
                 }}
               >
-                + Step page
+                + Step ${step}
               </button>`
-            : nothing}
+          )}
           <button
             style=${insertBtnStyle}
             @click=${(e: Event) => {
