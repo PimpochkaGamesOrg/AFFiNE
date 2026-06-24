@@ -5,7 +5,7 @@ import {
 } from '@affine/core/modules/google-drive/client';
 import {
   type ButtonAutomationProvider,
-  ButtonAutomationProviderExtension,
+  ButtonAutomationProviderIdentifier,
   createDefaultButtonAutomationProvider,
 } from '@blocksuite/affine/blocks/button';
 import type { ExtensionType } from '@blocksuite/store';
@@ -22,5 +22,9 @@ export function patchButtonAutomationGoogleDrive(
     },
   };
 
-  return ButtonAutomationProviderExtension(provider);
+  return {
+    setup: di => {
+      di.override(ButtonAutomationProviderIdentifier, provider);
+    },
+  };
 }
