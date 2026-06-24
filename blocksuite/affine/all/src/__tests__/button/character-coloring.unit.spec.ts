@@ -1,8 +1,11 @@
 import {
   assignCharacterColors,
+  buildScriptLines,
   detectDialogueBlocks,
   extractPotentialCharacterName,
   isActionBlock,
+  isCharacterNameLine,
+  isReplicaLine,
   parseSingleBlockDialogue,
   type TextBlockEntry,
   translateColorName,
@@ -19,11 +22,40 @@ function entry(fullText: string, index = 0): TextBlockEntry {
   };
 }
 
+const USER_SCRIPT_BLOCKS = [
+  'СЦЕНА 1 — ФИЗРУК И ВАФЕЛЬКА ВЫСЛЕЖИВАЮТ',
+  'Кадр . Физрук и Вафелька крадутся.',
+  'ФИЗРУК',
+  '(Нюхает воздух)',
+  'Я чую кошачий запах...',
+  'ВАФЕЛЬКА',
+  '(Хрустит пальцами)',
+  'Пахнет добычей.',
+  'Много добычи.',
+  '───',
+  'СЦЕНА 2 — ПОРТАЛ ОТКРЫВАЕТСЯ',
+  'Чёрный экран. Гул. Включается зелёный портал.',
+  'СИМБА',
+  '(Удивлённо)',
+  'Что за...',
+  'БЕНЧИК',
+  '(Шёпотом, трясётся)',
+].map((text, index) => entry(text, index));
+
 describe('character coloring parser', () => {
   test('detects action blocks', () => {
     expect(isActionBlock('Кадр снаружи снаружи')).toBe(true);
+    expect(isActionBlock('Кадр . Физрук и Вафелька крадутся.')).toBe(true);
     expect(isActionBlock('СЦЕНА 1 — ФИЗРУК И ВАФЕЛЬКА')).toBe(true);
     expect(isActionBlock('ФИЗРУК')).toBe(false);
+  });
+
+  test('distinguishes character names from replica lines', () => {
+    expect(isCharacterNameLine('ФИЗРУК')).toBe(true);
+    expect(isCharacterNameLine('ВАФЕЛЬКА')).toBe(true);
+    expect(isReplicaLine('ФИЗРУК')).toBe(false);
+    expect(isReplicaLine('Пахнет добычей.')).toBe(true);
+    expect(isReplicaLine('Я чую кошачий запах...')).toBe(true);
   });
 
   test('extracts character names', () => {
@@ -50,11 +82,37 @@ describe('character coloring parser', () => {
       entry('(грустно)', 1),
       entry('Я устал.', 2),
     ];
-    expect(detectDialogueBlocks(blocks)).toEqual([
-      { index: 0, characterName: 'СИМБА' },
-      { index: 1, characterName: 'СИМБА' },
-      { index: 2, characterName: 'СИМБА' },
-    ]);
+    const result = detectDialogueBlocks(blocks);
+    expect(result).toHaveLength(3);
+    expect(result.every(item => item.characterName === 'СИМБА')).toBe(true);
+  });
+
+  test('parses user screenplay format with one line per paragraph', () => {
+    const result = detectDialogueBlocks(USER_SCRIPT_BLOCKS);
+    const names = [...new Set(result.map(item => item.characterName))];
+    expect(names).toContain('ФИЗРУК');
+    expect(names).toContain('ВАФЕЛЬКА');
+    expect(names).toContain('СИМБА');
+    expect(names).toContain('БЕНЧИК');
+    expect(result.some(item => item.characterName === 'ФИЗРУК')).toBe(true);
+    expect(result.some(item => item.characterName === 'ВАФЕЛЬКА')).toBe(true);
+    expect(
+      result.some(
+        item =>
+          USER_SCRIPT_BLOCKS[item.blockIndex]?.fullText === 'Много добычи.' &&
+          item.characterName === 'ВАФЕЛЬКА'
+      )
+    ).toBe(true);
+  });
+
+  test('parses user screenplay pasted into one paragraph', () => {
+    const script = USER_SCRIPT_BLOCKS.map(block => block.fullText).join('\n');
+    const blocks = [entry(script)];
+    const lines = buildScriptLines(blocks);
+    expect(lines.length).toBeGreaterThan(10);
+    const result = detectDialogueBlocks(blocks);
+    expect(result.some(item => item.characterName === 'ФИЗРУК')).toBe(true);
+    expect(result.some(item => item.characterName === 'СИМБА')).toBe(true);
   });
 
   test('skips action blocks between dialogues', () => {
@@ -66,11 +124,19 @@ describe('character coloring parser', () => {
       entry('Стоп!', 4),
     ];
     const result = detectDialogueBlocks(blocks);
-    expect(result).toContainEqual({ index: 0, characterName: 'ВАФЕЛЬКА' });
-    expect(result).toContainEqual({ index: 1, characterName: 'ВАФЕЛЬКА' });
-    expect(result).toContainEqual({ index: 3, characterName: 'ТИГРА' });
-    expect(result).toContainEqual({ index: 4, characterName: 'ТИГРА' });
-    expect(result.some(item => item.index === 2)).toBe(false);
+    expect(result).toContainEqual(
+      expect.objectContaining({ blockIndex: 0, characterName: 'ВАФЕЛЬКА' })
+    );
+    expect(result).toContainEqual(
+      expect.objectContaining({ blockIndex: 1, characterName: 'ВАФЕЛЬКА' })
+    );
+    expect(result).toContainEqual(
+      expect.objectContaining({ blockIndex: 3, characterName: 'ТИГРА' })
+    );
+    expect(result).toContainEqual(
+      expect.objectContaining({ blockIndex: 4, characterName: 'ТИГРА' })
+    );
+    expect(result.some(item => item.blockIndex === 2)).toBe(false);
   });
 });
 
@@ -84,9 +150,9 @@ describe('character coloring colors', () => {
 
   test('assigns fixed colors and random for others', () => {
     const blocksToColor = [
-      { index: 0, characterName: 'СИМБА' },
-      { index: 1, characterName: 'ФИЗРУК' },
-      { index: 2, characterName: 'ТИГРА' },
+      { blockIndex: 0, characterName: 'СИМБА', start: 0, end: 5 },
+      { blockIndex: 1, characterName: 'ФИЗРУК', start: 0, end: 6 },
+      { blockIndex: 2, characterName: 'ТИГРА', start: 0, end: 5 },
     ];
     const assigned = assignCharacterColors(blocksToColor);
     expect(assigned.СИМБА).toBe('orange');

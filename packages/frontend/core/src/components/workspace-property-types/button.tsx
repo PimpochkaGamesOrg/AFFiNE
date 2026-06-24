@@ -29,7 +29,6 @@ import {
   buildButtonPropertyAdditionalData,
   createButtonPropertyAdditionalData,
   isButtonPropertyVisible,
-  isSourceDatabaseUsedByAnotherButtonProperty,
   parseButtonPropertyData,
 } from './button-utils';
 
@@ -59,7 +58,6 @@ export const ButtonValue = ({ propertyInfo, readonly }: PropertyValueProps) => {
   const livePropertyInfo = useLiveData(
     workspacePropertyService.propertyInfo$(propertyId)
   );
-  const workspaceProperties = useLiveData(workspacePropertyService.properties$);
   const automation = parseButtonPropertyData(livePropertyInfo ?? propertyInfo);
   const docId = docService.doc.id;
   const databaseBacklinks = useLiveData(
@@ -90,26 +88,12 @@ export const ButtonValue = ({ propertyInfo, readonly }: PropertyValueProps) => {
   const persistAutomation = useCallback(
     (config: ButtonAutomationConfig): boolean => {
       if (!propertyInfo?.id) return false;
-      if (
-        config.sourceDatabase &&
-        isSourceDatabaseUsedByAnotherButtonProperty(
-          workspaceProperties,
-          propertyInfo.id,
-          config.sourceDatabase
-        )
-      ) {
-        notify.warning({
-          title:
-            'This database is already used by another button property in the workspace',
-        });
-        return false;
-      }
       workspacePropertyService.updatePropertyInfo(propertyInfo.id, {
         additionalData: buildButtonPropertyAdditionalData(config),
       });
       return true;
     },
-    [propertyInfo, workspaceProperties, workspacePropertyService]
+    [propertyInfo, workspacePropertyService]
   );
 
   const handleConfigure = useCallback(

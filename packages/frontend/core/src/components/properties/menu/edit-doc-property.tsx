@@ -2,7 +2,6 @@ import {
   Input,
   MenuItem,
   MenuSeparator,
-  notify,
   useConfirmModal,
 } from '@affine/component';
 import type { DocCustomPropertyInfo } from '@affine/core/modules/db';
@@ -34,7 +33,6 @@ import {
 } from '../../workspace-property-types';
 import {
   buildButtonPropertyAdditionalData,
-  isSourceDatabaseUsedByAnotherButtonProperty,
   parseButtonPropertyData,
 } from '../../workspace-property-types/button-utils';
 import { WorkspacePropertyIconSelector } from '../icons/icons-selector';
@@ -56,7 +54,6 @@ export const EditWorkspacePropertyMenuItems = ({
   const t = useI18n();
   const workspacePropertyService = useService(WorkspacePropertyService);
   const workspaceService = useService(WorkspaceService);
-  const workspaceProperties = useLiveData(workspacePropertyService.properties$);
   const propertyInfo = useLiveData(
     workspacePropertyService.propertyInfo$(propertyId)
   );
@@ -157,20 +154,6 @@ export const EditWorkspacePropertyMenuItems = ({
         workspace: workspaceService.workspace.docCollection,
         config: automation,
         onSave: config => {
-          if (
-            config.sourceDatabase &&
-            isSourceDatabaseUsedByAnotherButtonProperty(
-              workspaceProperties,
-              propertyId,
-              config.sourceDatabase
-            )
-          ) {
-            notify.warning({
-              title:
-                'This database is already used by another button property in the workspace',
-            });
-            return false;
-          }
           workspacePropertyService.updatePropertyInfo(propertyId, {
             additionalData: buildButtonPropertyAdditionalData(config),
           });
@@ -182,7 +165,6 @@ export const EditWorkspacePropertyMenuItems = ({
       propertyId,
       propertyInfo,
       propertyType,
-      workspaceProperties,
       workspacePropertyService,
       workspaceService,
     ]

@@ -22,8 +22,19 @@ export type TextBlockEntry = {
 };
 
 export type BlockToColor = {
-  index: number;
+  blockIndex: number;
   characterName: string;
+  start: number;
+  end: number;
+};
+
+type ScriptLine = {
+  flatIndex: number;
+  blockIndex: number;
+  content: string;
+  start: number;
+  end: number;
+  text: Text;
 };
 
 const FIXED_CHARACTER_COLORS: Record<string, HighlightColorName> = {
@@ -100,14 +111,15 @@ export function translateColorName(raw: string): HighlightColorName | null {
 export function isActionBlock(text: string): boolean {
   const trimmed = text.trim();
   if (!trimmed) return true;
+  const lower = trimmed.toLowerCase();
   return (
-    /^кадр\s/i.test(trimmed) ||
-    /^отрывок\s+из/i.test(trimmed) ||
-    /^смена\s+ракурса/i.test(trimmed) ||
-    /^по\s+графу/i.test(trimmed) ||
-    /^тут\s+же/i.test(trimmed) ||
-    /!\[/.test(trimmed) ||
-    /^сцена\s+\d+/i.test(trimmed) ||
+    lower.startsWith('кадр') ||
+    lower.startsWith('отрывок из') ||
+    lower.startsWith('смена ракурса') ||
+    lower.startsWith('по графу') ||
+    lower.startsWith('тут же') ||
+    trimmed.includes('![') ||
+    (lower.startsWith('сцена ') && /\d/.test(trimmed.slice(6))) ||
     trimmed.startsWith('───') ||
     trimmed.startsWith('---')
   );
@@ -117,15 +129,29 @@ export function isEmotionLine(text: string): boolean {
   return /^\([^)]+\)$/.test(text.trim());
 }
 
+export function isCharacterNameLine(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  const name = extractPotentialCharacterName(trimmed);
+  return name !== null && name === normalizeCharacterName(trimmed);
+}
+
 export function isReplicaLine(text: string): boolean {
   const trimmed = text.trim();
   if (!trimmed) return false;
+  if (
+    isEmotionLine(trimmed) ||
+    isActionBlock(trimmed) ||
+    isCharacterNameLine(trimmed)
+  ) {
+    return false;
+  }
   if (/^\*\*.+\*\*$/.test(trimmed)) return true;
   if (/[?!…]$/.test(trimmed)) return true;
+  if (/\.{3}$/.test(trimmed)) return true;
+  if (/[.]$/.test(trimmed) && /[а-яёa-z]/i.test(trimmed)) return true;
   if (/^[«"'].*[»"']$/.test(trimmed)) return true;
-  return (
-    trimmed.length > 0 && !isEmotionLine(trimmed) && !isActionBlock(trimmed)
-  );
+  return /[а-яёa-z]/.test(trimmed);
 }
 
 function normalizeCharacterName(name: string): string {
@@ -194,85 +220,106 @@ export function parseSingleBlockDialogue(
   return null;
 }
 
+export function buildScriptLines(blocks: TextBlockEntry[]): ScriptLine[] {
+  const result: ScriptLine[] = [];
+  let flatIndex = 0;
+
+  for (const block of blocks) {
+    const full = block.fullText;
+    if (!full.trim()) continue;
+
+    let searchFrom = 0;
+    const parts = full.split('\n');
+    for (let partIndex = 0; partIndex < parts.length; partIndex++) {
+      const rawPart = parts[partIndex];
+      const trimmed = rawPart.trim();
+      if (!trimmed) {
+        searchFrom += rawPart.length + (partIndex < parts.length - 1 ? 1 : 0);
+        continue;
+      }
+      const start = full.indexOf(trimmed, searchFrom);
+      const end = start + trimmed.length;
+      result.push({
+        flatIndex,
+        blockIndex: block.index,
+        content: trimmed,
+        start,
+        end,
+        text: block.text,
+      });
+      flatIndex++;
+      searchFrom = end;
+    }
+  }
+
+  return result;
+}
+
 export function detectDialogueBlocks(blocks: TextBlockEntry[]): BlockToColor[] {
+  const lines = buildScriptLines(blocks);
   const result: BlockToColor[] = [];
   let index = 0;
 
-  while (index < blocks.length) {
-    const block = blocks[index];
-    const fullText = block.fullText;
+  const pushLine = (line: ScriptLine, characterName: string) => {
+    result.push({
+      blockIndex: line.blockIndex,
+      characterName,
+      start: line.start,
+      end: line.end,
+    });
+  };
 
-    if (!fullText.trim() || isActionBlock(fullText)) {
+  while (index < lines.length) {
+    const line = lines[index];
+    const content = line.content;
+
+    if (!content.trim() || isActionBlock(content)) {
       index++;
       continue;
     }
 
-    const singleBlockDialogue = parseSingleBlockDialogue(fullText);
+    const singleBlockDialogue = parseSingleBlockDialogue(content);
     if (singleBlockDialogue) {
-      result.push({ index, characterName: singleBlockDialogue.characterName });
+      pushLine(line, singleBlockDialogue.characterName);
       index++;
       continue;
     }
 
-    const lines = splitLines(fullText);
-    const nameFromFirstLine = extractPotentialCharacterName(lines[0] ?? '');
-    if (!nameFromFirstLine || lines.length !== 1) {
+    const nameFromLine = extractPotentialCharacterName(content);
+    if (!nameFromLine || !isCharacterNameLine(content)) {
       index++;
       continue;
     }
 
-    const characterName = nameFromFirstLine;
-    result.push({ index, characterName });
+    const characterName = nameFromLine;
+    pushLine(line, characterName);
 
     let cursor = index + 1;
-    if (
-      cursor < blocks.length &&
-      isEmotionLine(blocks[cursor].fullText) &&
-      splitLines(blocks[cursor].fullText).length === 1
-    ) {
-      result.push({ index: cursor, characterName });
+    if (cursor < lines.length && isEmotionLine(lines[cursor].content)) {
+      pushLine(lines[cursor], characterName);
       cursor++;
     }
 
-    while (cursor < blocks.length) {
-      const next = blocks[cursor];
-      const nextText = next.fullText;
+    while (cursor < lines.length) {
+      const next = lines[cursor];
+      const nextText = next.content;
       if (!nextText.trim() || isActionBlock(nextText)) break;
 
-      const nextLines = splitLines(nextText);
-      const nextName = extractPotentialCharacterName(nextLines[0] ?? '');
-      if (
-        nextName &&
-        nextLines.length === 1 &&
-        !isReplicaLine(nextText) &&
-        !isEmotionLine(nextText)
-      ) {
-        break;
-      }
+      if (isCharacterNameLine(nextText)) break;
       if (isEmotionLine(nextText) && cursor > index + 1) break;
 
-      result.push({ index: cursor, characterName });
+      pushLine(next, characterName);
       cursor++;
 
       if (isReplicaLine(nextText)) {
-        while (cursor < blocks.length) {
-          const continuation = blocks[cursor];
-          const continuationText = continuation.fullText;
+        while (cursor < lines.length) {
+          const continuation = lines[cursor];
+          const continuationText = continuation.content;
           if (!continuationText.trim() || isActionBlock(continuationText))
             break;
-          const continuationLines = splitLines(continuationText);
-          const continuationName = extractPotentialCharacterName(
-            continuationLines[0] ?? ''
-          );
-          if (
-            continuationName &&
-            continuationLines.length === 1 &&
-            !isReplicaLine(continuationText)
-          ) {
-            break;
-          }
+          if (isCharacterNameLine(continuationText)) break;
           if (isEmotionLine(continuationText)) break;
-          result.push({ index: cursor, characterName });
+          pushLine(continuation, characterName);
           cursor++;
         }
         break;
@@ -372,13 +419,19 @@ export function collectTextBlocksInOrder(store: Store): TextBlockEntry[] {
   return result;
 }
 
-export function applyColorToText(text: Text, color: HighlightColorName) {
-  if (text.length === 0) return;
+export function applyColorToTextRange(
+  text: Text,
+  start: number,
+  end: number,
+  color: HighlightColorName
+) {
+  const length = end - start;
+  if (length <= 0 || start < 0 || end > text.length) return;
   const attributes: AffineTextStyleAttributes = {
     bold: true,
     color: toHighlightCssVar(color),
   };
-  text.format(0, text.length, attributes);
+  text.format(start, length, attributes);
 }
 
 export function executeColorCharactersAction(input: {
@@ -397,11 +450,11 @@ export function executeColorCharactersAction(input: {
   host.store.captureSync();
   host.store.transact(() => {
     for (const item of blocksToColor) {
-      const block = blocks[item.index];
+      const block = blocks[item.blockIndex];
       if (!block) continue;
       const color = colorMap[item.characterName];
       if (!color) continue;
-      applyColorToText(block.text, color);
+      applyColorToTextRange(block.text, item.start, item.end, color);
     }
   });
 

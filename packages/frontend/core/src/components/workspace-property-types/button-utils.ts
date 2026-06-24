@@ -79,22 +79,3 @@ export function isButtonPropertyVisible(
     sourceDatabase.databaseBlockId
   );
 }
-
-export function isSourceDatabaseUsedByAnotherButtonProperty(
-  properties: DocCustomPropertyInfo[],
-  propertyId: string,
-  sourceDatabase: ButtonAutomationConfig['sourceDatabase']
-): boolean {
-  if (!sourceDatabase?.databaseDocId || !sourceDatabase.databaseBlockId) {
-    return false;
-  }
-  const key = `${sourceDatabase.databaseDocId}:${sourceDatabase.databaseBlockId}`;
-  return properties.some(property => {
-    if (property.id === propertyId || property.type !== 'button') return false;
-    const automation = parseButtonPropertyData(property);
-    const otherKey = automation.sourceDatabase
-      ? `${automation.sourceDatabase.databaseDocId}:${automation.sourceDatabase.databaseBlockId}`
-      : '';
-    return otherKey === key;
-  });
-}
