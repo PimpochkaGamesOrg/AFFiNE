@@ -1,6 +1,7 @@
 import {
   assignCharacterColors,
   buildScriptLines,
+  collectTextBlocksInOrder,
   detectDialogueBlocks,
   extractPotentialCharacterName,
   isActionBlock,
@@ -10,7 +11,16 @@ import {
   type TextBlockEntry,
   translateColorName,
 } from '@blocksuite/affine-block-button';
+import {
+  NoteBlockSchemaExtension,
+  ParagraphBlockSchemaExtension,
+  RootBlockSchemaExtension,
+} from '@blocksuite/affine-model';
 import { Text } from '@blocksuite/store';
+import {
+  createAutoIncrementIdGenerator,
+  TestWorkspace,
+} from '@blocksuite/store/test';
 import { describe, expect, test } from 'vitest';
 
 function entry(fullText: string, index = 0): TextBlockEntry {
@@ -137,6 +147,43 @@ describe('character coloring parser', () => {
       expect.objectContaining({ blockIndex: 4, characterName: 'ТИГРА' })
     );
     expect(result.some(item => item.blockIndex === 2)).toBe(false);
+  });
+});
+
+describe('character coloring store collection', () => {
+  const extensions = [
+    RootBlockSchemaExtension,
+    NoteBlockSchemaExtension,
+    ParagraphBlockSchemaExtension,
+  ];
+
+  test('collects paragraph blocks from a real document store', () => {
+    const workspace = new TestWorkspace({
+      id: 'ws',
+      idGenerator: createAutoIncrementIdGenerator(),
+    });
+    workspace.meta.initialize();
+    const doc = workspace.createDoc('script-doc');
+    doc.load();
+    const store = doc.getStore({ id: 'script-doc', extensions });
+    const rootId = store.addBlock('affine:page', { title: new Text('Script') });
+    const noteId = store.addBlock('affine:note', {}, rootId);
+
+    for (const line of [
+      'ФИЗРУК',
+      '(Нюхает воздух)',
+      'Я чую кошачий запах...',
+      'ВАФЕЛЬКА',
+      'Пахнет добычей.',
+    ]) {
+      const paragraphId = store.addBlock('affine:paragraph', {}, noteId);
+      const paragraph = store.getBlock(paragraphId)?.model;
+      paragraph?.text?.insert(line, 0);
+    }
+
+    const blocks = collectTextBlocksInOrder(store);
+    expect(blocks).toHaveLength(5);
+    expect(detectDialogueBlocks(blocks).length).toBeGreaterThan(0);
   });
 });
 

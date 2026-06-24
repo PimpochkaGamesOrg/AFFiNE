@@ -408,9 +408,8 @@ export function collectTextBlocksInOrder(store: Store): TextBlockEntry[] {
         });
       }
     }
-    for (const childId of model.children) {
-      const child = store.getBlock(childId)?.model;
-      if (child) visit(child);
+    for (const child of model.children) {
+      visit(child);
     }
   };
 
