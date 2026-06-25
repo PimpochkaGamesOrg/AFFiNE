@@ -4,7 +4,7 @@ set -euo pipefail
 INSTALL_DIR="${1:-/opt/affine}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-PREDEPLOY_SRC="$REPO_ROOT/.docker/pimpochka/self-host-predeploy.js"
+PREDEPLOY_SRC="$REPO_ROOT/packages/backend/server/scripts/self-host-predeploy.js"
 COMPOSE_SRC="$REPO_ROOT/.docker/pimpochka/compose.yml"
 
 if [[ ! -f "$PREDEPLOY_SRC" ]]; then

@@ -16,7 +16,7 @@
 /opt/affine/           # установка (compose, данные)
   docker-compose.yml
   .env
-  scripts/self-host-predeploy.js
+  scripts/self-host-predeploy.js  # копия из packages/backend/server/scripts/
   data/postgres/       # БД
   data/storage/        # файлы
   data/config/         # config.json, private.key
@@ -57,7 +57,7 @@ git pull
 
 # или вручную:
 # cp .docker/pimpochka/compose.yml /opt/affine/docker-compose.yml
-# cp .docker/pimpochka/self-host-predeploy.js /opt/affine/scripts/
+# cp packages/backend/server/scripts/self-host-predeploy.js /opt/affine/scripts/
 # cd /opt/affine && docker compose run --rm affine_migration
 # docker compose up -d
 ```
