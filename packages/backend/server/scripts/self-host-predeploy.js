@@ -5,8 +5,15 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const APP_ROOT = path.resolve(fileURLToPath(import.meta.url), '..');
-const PRISMA_BIN = path.join(APP_ROOT, 'node_modules', 'prisma', 'build', 'index.js');
+const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
+const APP_ROOT = path.resolve(SCRIPT_DIR, '..');
+const PRISMA_BIN = path.join(
+  APP_ROOT,
+  'node_modules',
+  'prisma',
+  'build',
+  'index.js'
+);
 const MAIN_BIN = path.join(APP_ROOT, 'dist', 'main.js');
 const SELF_HOST_CONFIG_DIR = `${homedir()}/.affine/config`;
 
@@ -111,9 +118,7 @@ function fixFailedMigrations() {
       ) {
         continue;
       }
-      console.log(
-        `migration [${migration}] rolled back failed. ${message}`
-      );
+      console.log(`migration [${migration}] rolled back failed. ${message}`);
     }
   }
 }
