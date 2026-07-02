@@ -56,6 +56,7 @@ import { ModelsModule } from './models';
 import { CalendarModule } from './plugins/calendar';
 import { CaptchaModule } from './plugins/captcha';
 import { CopilotModule, CopilotRealtimeModule } from './plugins/copilot';
+import { ExternalApiModule } from './plugins/external-api';
 import { GCloudModule } from './plugins/gcloud';
 import { GoogleDriveModule } from './plugins/google-drive';
 import { IndexerModule } from './plugins/indexer';
@@ -219,7 +220,8 @@ export function buildAppModule(env: Env) {
       () => env.dev || env.selfhosted,
       WorkerModule,
       NotionModule,
-      SelfhostModule
+      SelfhostModule,
+      ExternalApiModule
     )
     // static frontend routes for front flavor
     .useIf(() => env.flavors.front, StaticFileModule)
