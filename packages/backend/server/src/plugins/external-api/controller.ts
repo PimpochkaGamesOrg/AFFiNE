@@ -70,7 +70,7 @@ export class ExternalApiController {
       title: body.title,
       status: body.status ?? '',
       direction: body.direction ?? '',
-      editorId: 'external-api',
+      editorId: undefined,
     });
 
     return { ok: true, rowId: result.rowId };
