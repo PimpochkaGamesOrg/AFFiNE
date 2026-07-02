@@ -16,6 +16,7 @@ defineModuleConfig('externalApi', {
   token: {
     desc: 'Bearer token required to call external /api/external/* endpoints',
     default: '',
+    env: ['EXTERNAL_API_TOKEN', 'string'],
     schema: {
       type: 'string',
     },

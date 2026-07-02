@@ -11,6 +11,7 @@ import {
 import type { Request } from 'express';
 
 import { ActionForbidden, Config } from '../../base';
+import { Public } from '../../core/auth';
 import { ExternalApiService } from './service';
 
 interface CreateDatabaseRowBody {
@@ -50,6 +51,7 @@ export class ExternalApiTokenGuard {
   }
 }
 
+@Public()
 @Controller('/api/external')
 @UseGuards(ExternalApiTokenGuard)
 export class ExternalApiController {
