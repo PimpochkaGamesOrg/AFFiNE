@@ -11,26 +11,28 @@ export function patchButtonAutomationConfirm(
 ): ExtensionType {
   return {
     setup: di => {
-      const base =
-        di.getOptional(ButtonAutomationProviderIdentifier) ??
-        createDefaultButtonAutomationProvider();
+      const prevFactory = di.getFactory(ButtonAutomationProviderIdentifier);
 
-      const provider: ButtonAutomationProvider = {
-        ...base,
-        showConfirm: input =>
-          new Promise(resolve => {
-            confirmModal.openConfirmModal({
-              description: input.message,
-              confirmText: input.continueText,
-              cancelText: input.cancelText,
-              confirmButtonOptions: { variant: 'primary' },
-              onConfirm: () => resolve({ confirmed: true }),
-              onCancel: () => resolve({ confirmed: false }),
-            });
-          }),
-      };
+      di.override(ButtonAutomationProviderIdentifier, provider => {
+        const base: ButtonAutomationProvider = prevFactory
+          ? prevFactory(provider)
+          : createDefaultButtonAutomationProvider();
 
-      di.override(ButtonAutomationProviderIdentifier, provider);
+        return {
+          ...base,
+          showConfirm: input =>
+            new Promise(resolve => {
+              confirmModal.openConfirmModal({
+                description: input.message,
+                confirmText: input.continueText,
+                cancelText: input.cancelText,
+                confirmButtonOptions: { variant: 'primary' },
+                onConfirm: () => resolve({ confirmed: true }),
+                onCancel: () => resolve({ confirmed: false }),
+              });
+            }),
+        };
+      });
     },
   };
 }

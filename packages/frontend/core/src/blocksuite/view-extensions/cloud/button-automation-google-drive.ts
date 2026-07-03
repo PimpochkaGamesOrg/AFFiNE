@@ -15,20 +15,22 @@ export function patchButtonAutomationGoogleDrive(
 ): ExtensionType {
   return {
     setup: di => {
-      const base =
-        di.getOptional(ButtonAutomationProviderIdentifier) ??
-        createDefaultButtonAutomationProvider();
+      const prevFactory = di.getFactory(ButtonAutomationProviderIdentifier);
 
-      const provider: ButtonAutomationProvider = {
-        ...base,
-        googleDrive: {
-          ensureAuthorized: () => ensureGoogleDriveAuthorized(fetchService),
-          createFolders: request =>
-            createGoogleDriveFolders(fetchService, request),
-        },
-      };
+      di.override(ButtonAutomationProviderIdentifier, provider => {
+        const base: ButtonAutomationProvider = prevFactory
+          ? prevFactory(provider)
+          : createDefaultButtonAutomationProvider();
 
-      di.override(ButtonAutomationProviderIdentifier, provider);
+        return {
+          ...base,
+          googleDrive: {
+            ensureAuthorized: () => ensureGoogleDriveAuthorized(fetchService),
+            createFolders: request =>
+              createGoogleDriveFolders(fetchService, request),
+          },
+        };
+      });
     },
   };
 }
