@@ -157,13 +157,82 @@ export class ExternalApiService {
   }
 
   private findDatabaseBlockId(yBlocks: Y.Map<unknown>): string | null {
+    let best: { id: string; columnCount: number } | null = null;
     for (const [id, block] of yBlocks.entries()) {
       if (
         block instanceof Y.Map &&
         block.get('sys:flavour') === DATABASE_FLAVOUR
       ) {
-        return id;
+        const columns = block.get('prop:columns');
+        const columnCount = columns instanceof Y.Array ? columns.length : 0;
+        if (!best || columnCount >= best.columnCount) {
+          best = { id, columnCount };
+        }
       }
+    }
+    return best?.id ?? null;
+  }
+
+  private readColumnField(column: unknown, key: string): unknown {
+    if (column instanceof Y.Map) {
+      return column.get(key);
+    }
+    if (column && typeof column === 'object') {
+      return (column as Record<string, unknown>)[key];
+    }
+    return undefined;
+  }
+
+  private readColumnName(column: unknown): string | undefined {
+    const name = this.readColumnField(column, 'name');
+    return typeof name === 'string' ? name : undefined;
+  }
+
+  private readColumnId(column: unknown): string | undefined {
+    const id = this.readColumnField(column, 'id');
+    return typeof id === 'string' ? id : undefined;
+  }
+
+  private readSelectOptions(column: unknown): SelectOption[] {
+    const data = this.readColumnField(column, 'data');
+    if (data instanceof Y.Map) {
+      const options = data.get('options');
+      if (!(options instanceof Y.Array)) {
+        return [];
+      }
+      return options
+        .toArray()
+        .map(option => this.readSelectOption(option))
+        .filter((option): option is SelectOption => option !== null);
+    }
+    if (data && typeof data === 'object') {
+      const options = (data as ColumnData['data']).options;
+      return Array.isArray(options) ? options : [];
+    }
+    return [];
+  }
+
+  private readSelectOption(option: unknown): SelectOption | null {
+    if (option instanceof Y.Map) {
+      const id = option.get('id');
+      const value = option.get('value');
+      const color = option.get('color');
+      if (typeof id !== 'string' || typeof value !== 'string') {
+        return null;
+      }
+      return {
+        id,
+        value,
+        color: typeof color === 'string' ? color : '',
+      };
+    }
+    if (
+      option &&
+      typeof option === 'object' &&
+      typeof (option as SelectOption).id === 'string' &&
+      typeof (option as SelectOption).value === 'string'
+    ) {
+      return option as SelectOption;
     }
     return null;
   }
@@ -219,8 +288,20 @@ export class ExternalApiService {
 
     const column = this.findColumnByName(columns, columnNameCandidates);
     if (!column) {
+      const available = columns
+        .toArray()
+        .map(col => this.readColumnName(col))
+        .filter((name): name is string => Boolean(name));
       this.logger.warn(
-        `Column not found for candidates=${columnNameCandidates.join('/')}; skipping value="${desiredValue}"`
+        `Column not found for candidates=${columnNameCandidates.join('/')}; available=${available.join(', ')}; skipping value="${desiredValue}"`
+      );
+      return;
+    }
+
+    const columnId = this.readColumnId(column);
+    if (!columnId) {
+      this.logger.warn(
+        `Column id is missing for value="${desiredValue}"; skipping cell write`
       );
       return;
     }
@@ -231,17 +312,20 @@ export class ExternalApiService {
       desiredValue,
       fallbackOptionColor
     );
-    this.writeCell(dbBlock, rowId, column.id, optionId);
+    this.writeCell(dbBlock, rowId, columnId, optionId);
   }
 
   private findColumnByName(
-    columns: Y.Array<ColumnData>,
+    columns: Y.Array<unknown>,
     candidates: readonly string[]
-  ): ColumnData | null {
+  ): unknown | null {
     const all = columns.toArray();
     for (const candidate of candidates) {
       const lower = candidate.toLowerCase();
-      const found = all.find(col => col?.name?.toLowerCase() === lower);
+      const found = all.find(col => {
+        const name = this.readColumnName(col);
+        return name?.toLowerCase() === lower;
+      });
       if (found) {
         return found;
       }
@@ -250,16 +334,19 @@ export class ExternalApiService {
   }
 
   private ensureSelectOption(
-    columns: Y.Array<ColumnData>,
-    column: ColumnData,
+    columns: Y.Array<unknown>,
+    column: unknown,
     desiredValue: string,
     fallbackColor: string
   ): string {
-    const options = Array.isArray(column.data?.options)
-      ? column.data.options
-      : [];
+    const columnId = this.readColumnId(column);
+    if (!columnId) {
+      throw new Error('Column id is missing while adding select option');
+    }
+
+    const options = this.readSelectOptions(column);
     const existing = options.find(
-      opt => opt?.value?.toLowerCase() === desiredValue.toLowerCase()
+      opt => opt.value.toLowerCase() === desiredValue.toLowerCase()
     );
     if (existing) {
       return existing.id;
@@ -271,16 +358,36 @@ export class ExternalApiService {
       value: desiredValue,
     };
 
-    const index = this.findColumnIndex(columns, column.id);
+    if (column instanceof Y.Map) {
+      let data = column.get('data');
+      if (!(data instanceof Y.Map)) {
+        data = new Y.Map<unknown>();
+        column.set('data', data);
+      }
+      let optionList = data.get('options');
+      if (!(optionList instanceof Y.Array)) {
+        optionList = new Y.Array<unknown>();
+        data.set('options', optionList);
+      }
+      const optionMap = new Y.Map<unknown>();
+      optionMap.set('id', option.id);
+      optionMap.set('color', option.color);
+      optionMap.set('value', option.value);
+      optionList.push([optionMap]);
+      return option.id;
+    }
+
+    const index = this.findColumnIndex(columns, columnId);
     if (index === -1) {
       throw new Error(
-        `Column ${column.id} not found in Y.Array while adding option`
+        `Column ${columnId} not found in Y.Array while adding option`
       );
     }
 
+    const plainColumn = column as ColumnData;
     const updated: ColumnData = {
-      ...column,
-      data: { ...column.data, options: [...options, option] },
+      ...plainColumn,
+      data: { ...plainColumn.data, options: [...options, option] },
     };
     columns.delete(index, 1);
     columns.insert(index, [updated]);
@@ -288,11 +395,10 @@ export class ExternalApiService {
     return option.id;
   }
 
-  private findColumnIndex(
-    columns: Y.Array<ColumnData>,
-    columnId: string
-  ): number {
-    return columns.toArray().findIndex(col => col?.id === columnId);
+  private findColumnIndex(columns: Y.Array<unknown>, columnId: string): number {
+    return columns
+      .toArray()
+      .findIndex(col => this.readColumnId(col) === columnId);
   }
 
   private writeCell(
@@ -311,6 +417,13 @@ export class ExternalApiService {
       rowCells = new Y.Map<CellValue>();
       cells.set(rowId, rowCells);
     }
-    rowCells.set(columnId, { columnId, value });
+
+    const cell =
+      rowCells instanceof Y.Map && rowCells.get(columnId) instanceof Y.Map
+        ? (rowCells.get(columnId) as Y.Map<unknown>)
+        : new Y.Map<unknown>();
+    cell.set('columnId', columnId);
+    cell.set('value', value);
+    rowCells.set(columnId, cell);
   }
 }
