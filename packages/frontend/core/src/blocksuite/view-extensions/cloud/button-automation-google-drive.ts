@@ -13,17 +13,21 @@ import type { ExtensionType } from '@blocksuite/store';
 export function patchButtonAutomationGoogleDrive(
   fetchService: FetchService
 ): ExtensionType {
-  const base = createDefaultButtonAutomationProvider();
-  const provider: ButtonAutomationProvider = {
-    ...base,
-    googleDrive: {
-      ensureAuthorized: () => ensureGoogleDriveAuthorized(fetchService),
-      createFolders: request => createGoogleDriveFolders(fetchService, request),
-    },
-  };
-
   return {
     setup: di => {
+      const base =
+        di.getOptional(ButtonAutomationProviderIdentifier) ??
+        createDefaultButtonAutomationProvider();
+
+      const provider: ButtonAutomationProvider = {
+        ...base,
+        googleDrive: {
+          ensureAuthorized: () => ensureGoogleDriveAuthorized(fetchService),
+          createFolders: request =>
+            createGoogleDriveFolders(fetchService, request),
+        },
+      };
+
       di.override(ButtonAutomationProviderIdentifier, provider);
     },
   };
