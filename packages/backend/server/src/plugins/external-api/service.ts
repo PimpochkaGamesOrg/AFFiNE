@@ -15,6 +15,10 @@ const DIRECTION_COLUMN_CANDIDATES = ['Направление', 'Direction', 'н�
 const STATUS_COLOR = 'var(--affine-tag-green)';
 const DIRECTION_COLOR = 'var(--affine-tag-blue)';
 
+const STATUS_PUBLISHED = 'Опубликован';
+const STATUS_DEVELOPMENT = 'Разработка';
+const DIRECTION_LOCALISATION = 'Localisation';
+
 const ROW_ID_ALPHABET =
   'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 const newRowId = customAlphabet(ROW_ID_ALPHABET, 10);
@@ -63,7 +67,12 @@ export class ExternalApiService {
   async addDatabaseRow(
     input: AddDatabaseRowInput
   ): Promise<AddDatabaseRowResult> {
-    const { workspaceId, docId, title, status, direction } = input;
+    const { workspaceId, docId, title } = input;
+    const { status, direction } = this.normalizeRowFields(
+      title,
+      input.status,
+      input.direction
+    );
 
     const record = await this.storage.getDoc(workspaceId, docId);
     if (!record?.bin) {
@@ -147,6 +156,66 @@ export class ExternalApiService {
     );
 
     return { rowId };
+  }
+
+  private normalizeRowFields(title: string, status: string, direction: string) {
+    const kind = this.detectPublicationKind(title, direction);
+
+    if (kind === 'loc') {
+      return {
+        status: STATUS_DEVELOPMENT,
+        direction: DIRECTION_LOCALISATION,
+      };
+    }
+
+    if (kind === 'ru') {
+      return {
+        status: STATUS_PUBLISHED,
+        direction: '',
+      };
+    }
+
+    const trimmedDirection = direction.trim().toLowerCase();
+    if (
+      trimmedDirection === 'localisation' ||
+      trimmedDirection === 'локализация'
+    ) {
+      return {
+        status: STATUS_DEVELOPMENT,
+        direction: DIRECTION_LOCALISATION,
+      };
+    }
+
+    return {
+      status: status.trim() || STATUS_PUBLISHED,
+      direction: direction.trim(),
+    };
+  }
+
+  private detectPublicationKind(
+    title: string,
+    direction: string
+  ): 'ru' | 'loc' | null {
+    const normalizedDirection = direction.trim().toLowerCase();
+    if (
+      normalizedDirection === 'localisation' ||
+      normalizedDirection === 'локализация'
+    ) {
+      return 'loc';
+    }
+    if (normalizedDirection === 'ru') {
+      return 'ru';
+    }
+
+    const normalizedTitle = title.trim();
+    if (/\sLOC$/i.test(normalizedTitle)) {
+      return 'loc';
+    }
+    if (/\sRU$/i.test(normalizedTitle)) {
+      return 'ru';
+    }
+
+    return null;
   }
 
   private toUint8(bin: Uint8Array | Buffer): Uint8Array {
