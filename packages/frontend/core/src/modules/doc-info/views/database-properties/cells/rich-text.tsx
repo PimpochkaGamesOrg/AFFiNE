@@ -19,9 +19,9 @@ const renderRichText = ({
   std,
   text,
 }: {
+  doc: Store;
   std: BlockStdScope;
   text: Y.Text;
-  doc: Store;
 }) => {
   const inlineManager = std.get(DefaultInlineManagerExtension.identifier);
 
@@ -43,8 +43,11 @@ const RichTextInput = ({
   dataSource,
   onChange,
   style,
-}: DatabaseCellRendererProps & { style?: CSSProperties }) => {
-  const std = useBlockStdScope(dataSource.doc);
+  std,
+}: DatabaseCellRendererProps & {
+  style?: CSSProperties;
+  std: BlockStdScope;
+}) => {
   const text = useLiveData(cell.value$ as LiveData<Y.Text>);
   const ref = useRef<HTMLDivElement>(null);
   // todo(@pengx17): following is a workaround to y.Text that it is got renewed when the cell is updated externally. however it breaks the cursor position.
@@ -75,13 +78,16 @@ const DesktopRichTextCell = ({
   onChange,
   rowId,
 }: DatabaseCellRendererProps) => {
+  const [std, portals] = useBlockStdScope(dataSource.doc);
   return (
     <PropertyValue>
+      {portals}
       <RichTextInput
         cell={cell}
         dataSource={dataSource}
         onChange={onChange}
         rowId={rowId}
+        std={std}
       />
     </PropertyValue>
   );
@@ -94,9 +100,11 @@ const MobileRichTextCell = ({
   rowId,
 }: DatabaseCellRendererProps) => {
   const [open, setOpen] = useState(false);
+  const [std, portals] = useBlockStdScope(dataSource.doc);
   const name = useLiveData(cell.property.name$);
   return (
     <>
+      {portals}
       <PropertyValue onClick={() => setOpen(true)}></PropertyValue>
       <ConfigModal
         onBack={() => setOpen(false)}
@@ -115,6 +123,7 @@ const MobileRichTextCell = ({
             dataSource={dataSource}
             onChange={onChange}
             rowId={rowId}
+            std={std}
             style={{ padding: 12 }}
           />
         </ConfigModal.RowGroup>
@@ -124,6 +133,7 @@ const MobileRichTextCell = ({
         dataSource={dataSource}
         onChange={onChange}
         rowId={rowId}
+        std={std}
       />
     </>
   );
