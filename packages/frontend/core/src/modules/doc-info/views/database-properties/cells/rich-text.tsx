@@ -6,7 +6,13 @@ import type { BlockStdScope } from '@blocksuite/affine/std';
 import type { Store } from '@blocksuite/affine/store';
 import { TextIcon } from '@blocksuite/icons/rc';
 import { type LiveData, useLiveData } from '@toeverything/infra';
-import { type CSSProperties, useEffect, useRef, useState } from 'react';
+import {
+  type CSSProperties,
+  Fragment,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import type * as Y from 'yjs';
 
 import type { DatabaseCellRendererProps } from '../../../types';
@@ -37,6 +43,18 @@ const renderRichText = ({
   richText.attributeRenderer = inlineManager.getRenderer();
   return richText;
 };
+
+const LitPortals = ({
+  portals,
+}: {
+  portals: ReturnType<typeof useBlockStdScope>[1];
+}) => (
+  <>
+    {portals.map(p => (
+      <Fragment key={p.id}>{p.portal}</Fragment>
+    ))}
+  </>
+);
 
 const RichTextInput = ({
   cell,
@@ -81,7 +99,7 @@ const DesktopRichTextCell = ({
   const [std, portals] = useBlockStdScope(dataSource.doc);
   return (
     <PropertyValue>
-      {portals}
+      <LitPortals portals={portals} />
       <RichTextInput
         cell={cell}
         dataSource={dataSource}
@@ -104,7 +122,7 @@ const MobileRichTextCell = ({
   const name = useLiveData(cell.property.name$);
   return (
     <>
-      {portals}
+      <LitPortals portals={portals} />
       <PropertyValue onClick={() => setOpen(true)}></PropertyValue>
       <ConfigModal
         onBack={() => setOpen(false)}
