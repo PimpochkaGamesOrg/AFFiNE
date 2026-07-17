@@ -6,11 +6,13 @@ export const calendarViewStyles = css`
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
-    --calendar-entry-height: 22px;
-    --calendar-entry-gap: 3px;
+    --calendar-days-per-row: 5;
+    --calendar-entry-height: 33px;
+    --calendar-entry-gap: 5px;
     --calendar-entry-slot-height: calc(
       var(--calendar-entry-height) + var(--calendar-entry-gap)
     );
+    --calendar-entry-radius: 12px;
     --calendar-grid-border-color: color-mix(
       in srgb,
       var(--affine-border-color) 58%,
@@ -42,7 +44,7 @@ export const calendarViewStyles = css`
 
   .calendar-shell {
     position: relative;
-    min-width: 720px;
+    min-width: 800px;
     padding: 0 0 12px;
   }
 
@@ -107,7 +109,7 @@ export const calendarViewStyles = css`
   .calendar-weekdays,
   .calendar-week {
     display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--calendar-days-per-row), minmax(0, 1fr));
   }
 
   .calendar-week {
@@ -118,9 +120,9 @@ export const calendarViewStyles = css`
     position: absolute;
     left: 0;
     right: 0;
-    top: 30px;
+    top: 36px;
     display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--calendar-days-per-row), minmax(0, 1fr));
     grid-auto-rows: var(--calendar-entry-slot-height);
     row-gap: 0;
     column-gap: 0;
@@ -144,8 +146,8 @@ export const calendarViewStyles = css`
 
   .calendar-weekday {
     color: var(--affine-text-secondary-color);
-    font-size: 12px;
-    padding: 4px 6px;
+    font-size: 13px;
+    padding: 4px 8px;
     user-select: none;
     -webkit-user-select: none;
   }
@@ -157,10 +159,10 @@ export const calendarViewStyles = css`
 
   .calendar-day {
     position: relative;
-    min-height: 112px;
+    min-height: 168px;
     border-right: 1px solid var(--calendar-grid-border-color);
     border-bottom: 1px solid var(--calendar-grid-border-color);
-    padding: 6px;
+    padding: 8px;
   }
 
   .calendar-day.is-outside {
@@ -197,14 +199,14 @@ export const calendarViewStyles = css`
     align-items: center;
     justify-content: center;
     width: max-content;
-    min-width: 20px;
-    height: 20px;
-    padding: 0 2px;
-    border-radius: 4px;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 4px;
+    border-radius: 6px;
     color: var(--affine-text-secondary-color);
-    font-size: 12px;
-    line-height: 18px;
-    margin-bottom: 4px;
+    font-size: 13px;
+    line-height: 20px;
+    margin-bottom: 6px;
     user-select: none;
     -webkit-user-select: none;
   }
@@ -238,15 +240,15 @@ export const calendarViewStyles = css`
     position: relative;
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     min-height: var(--calendar-entry-height);
     margin-top: var(--calendar-entry-gap);
-    padding: 0 6px;
-    border-radius: 4px;
+    padding: 0 10px;
+    border-radius: var(--calendar-entry-radius);
     color: var(--calendar-entry-text-color);
     background: var(--calendar-entry-bg);
-    font-size: 12px;
-    line-height: 18px;
+    font-size: 14px;
+    line-height: 20px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -256,12 +258,14 @@ export const calendarViewStyles = css`
   .calendar-entry.has-properties {
     flex-direction: column;
     align-items: stretch;
-    gap: 4px;
+    gap: 6px;
     height: auto;
-    padding: 6px;
+    padding: 10px;
     white-space: normal;
     overflow: hidden;
     text-overflow: unset;
+    border-radius: var(--calendar-entry-radius);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
   }
 
   .calendar-nav button:hover,
@@ -306,11 +310,15 @@ export const calendarViewStyles = css`
     overflow: hidden;
     text-overflow: ellipsis;
     font-weight: 500;
+    font-size: 14px;
+    line-height: 20px;
   }
 
   .calendar-entry.has-properties .calendar-entry-title {
     width: 100%;
     white-space: nowrap;
+    font-size: 15px;
+    line-height: 22px;
   }
 
   .calendar-entry-title.is-empty {
@@ -353,20 +361,20 @@ export const calendarViewStyles = css`
   .calendar-entry-properties {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 5px;
     min-width: 0;
     width: 100%;
   }
 
   .calendar-entry-property {
-    max-width: 72px;
-    padding: 1px 6px;
-    border-radius: 4px;
+    max-width: 100%;
+    padding: 2px 8px;
+    border-radius: 8px;
     background: color-mix(in srgb, var(--affine-pure-white) 80%, transparent);
     color: var(--affine-text-primary-color);
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 500;
-    line-height: 14px;
+    line-height: 16px;
     overflow: hidden;
     text-overflow: ellipsis;
   }
@@ -399,12 +407,12 @@ export const calendarViewStyles = css`
 
   .calendar-resize-handle.left {
     left: 0;
-    border-radius: 4px 0 0 4px;
+    border-radius: var(--calendar-entry-radius) 0 0 var(--calendar-entry-radius);
   }
 
   .calendar-resize-handle.right {
     right: 0;
-    border-radius: 0 4px 4px 0;
+    border-radius: 0 var(--calendar-entry-radius) var(--calendar-entry-radius) 0;
   }
 
   .calendar-resize-handle::after {
@@ -430,18 +438,18 @@ export const calendarViewStyles = css`
   .calendar-entry-preview {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     min-height: var(--calendar-entry-height);
     height: var(--calendar-entry-height);
     margin-top: var(--calendar-entry-gap);
-    padding: 0 6px;
+    padding: 0 10px;
     box-sizing: border-box;
-    border-radius: 4px;
+    border-radius: var(--calendar-entry-radius);
     border: 1.5px dashed var(--affine-primary-color);
     background: color-mix(in srgb, var(--affine-primary-color) 6%, transparent);
     color: var(--affine-primary-color);
-    font-size: 12px;
-    line-height: 18px;
+    font-size: 14px;
+    line-height: 20px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

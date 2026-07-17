@@ -15,7 +15,7 @@ const styles = css`
     align-items: center;
     gap: 6px;
     min-width: 0;
-    min-height: 18px;
+    min-height: 22px;
     pointer-events: none;
   }
 
@@ -24,13 +24,13 @@ const styles = css`
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    height: 18px;
+    height: 22px;
     color: var(--affine-icon-secondary);
   }
 
   affine-data-view-calendar-card-property .icon svg {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     fill: var(--affine-icon-secondary);
     color: var(--affine-icon-secondary);
   }
@@ -39,8 +39,8 @@ const styles = css`
     min-width: 0;
     flex: 1;
     overflow: hidden;
-    font-size: 11px;
-    line-height: 16px;
+    font-size: 12px;
+    line-height: 18px;
   }
 `;
 

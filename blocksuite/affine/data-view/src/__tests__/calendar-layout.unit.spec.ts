@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  CALENDAR_DAYS_PER_ROW,
   type CalendarEntry,
   createCalendarMonthLayout,
   getCalendarDayContentSlots,
@@ -32,7 +33,7 @@ describe('calendar month layout', () => {
     ).toEqual([entry]);
   });
 
-  it('splits range external entries across weeks', () => {
+  it('splits range external entries across rows', () => {
     const entry = {
       kind: 'external',
       id: 'external:1',
@@ -50,8 +51,8 @@ describe('calendar month layout', () => {
     });
 
     expect(layout.segments).toMatchObject([
-      { weekIndex: 1, startIndex: 6, span: 1 },
-      { weekIndex: 2, startIndex: 0, span: 3 },
+      { weekIndex: 2, startIndex: 3, span: 2 },
+      { weekIndex: 3, startIndex: 0, span: 2 },
     ]);
   });
 
@@ -97,7 +98,8 @@ describe('calendar month layout', () => {
     });
 
     expect(layout.segments).toMatchObject([
-      { weekIndex: 2, startIndex: 5, span: 2 },
+      { weekIndex: 3, startIndex: 4, span: 1 },
+      { weekIndex: 4, startIndex: 0, span: 1 },
     ]);
   });
 
@@ -121,16 +123,16 @@ describe('calendar month layout', () => {
     expect(layout.segments[0]).toMatchObject({
       weekIndex: 0,
       startIndex: 0,
-      span: 7,
+      span: CALENDAR_DAYS_PER_ROW,
     });
     expect(layout.segments.at(-1)).toMatchObject({
       weekIndex: layout.weeks.length - 1,
       startIndex: 0,
-      span: 7,
+      span: CALENDAR_DAYS_PER_ROW,
     });
   });
 
-  it('pads month view to full weeks', () => {
+  it('pads month view to full rows of five days', () => {
     const range = getCalendarVisibleMonthRange(day('2026-05-01'));
     const layout = createCalendarMonthLayout({
       month: day('2026-05-01'),
@@ -138,8 +140,13 @@ describe('calendar month layout', () => {
     });
 
     expect(new Date(range.from).getDay()).toBe(0);
-    expect(new Date(range.to).getDay()).toBe(6);
-    expect(layout.days).toHaveLength(layout.weeks.length * 7);
+    expect(layout.days.length % CALENDAR_DAYS_PER_ROW).toBe(0);
+    expect(layout.days).toHaveLength(
+      layout.weeks.length * CALENDAR_DAYS_PER_ROW
+    );
+    expect(
+      layout.weeks.every(week => week.length === CALENDAR_DAYS_PER_ROW)
+    ).toBe(true);
   });
 
   it('keeps day buckets on local midnight across DST boundaries', () => {
@@ -193,7 +200,7 @@ describe('calendar month layout', () => {
     });
 
     expect(layout.segments).toMatchObject([
-      { weekIndex: 1, startIndex: 1, span: 2 },
+      { weekIndex: 1, startIndex: 3, span: 2 },
     ]);
   });
 
@@ -312,7 +319,7 @@ describe('calendar month layout', () => {
     expect(getCalendarDayContentSlots(may8, 'database:moving')).toBe(4);
   });
 
-  it('splits row range entries across weeks with continuation metadata', () => {
+  it('splits row range entries across rows with continuation metadata', () => {
     const entry = {
       kind: 'row',
       id: 'database:row-1',
@@ -332,16 +339,16 @@ describe('calendar month layout', () => {
 
     expect(layout.segments).toMatchObject([
       {
-        weekIndex: 1,
-        startIndex: 6,
-        span: 1,
+        weekIndex: 2,
+        startIndex: 3,
+        span: 2,
         startsBeforeWeek: false,
         endsAfterWeek: true,
       },
       {
-        weekIndex: 2,
+        weekIndex: 3,
         startIndex: 0,
-        span: 3,
+        span: 2,
         startsBeforeWeek: true,
         endsAfterWeek: false,
       },

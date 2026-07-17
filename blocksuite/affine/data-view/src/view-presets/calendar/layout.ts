@@ -1,5 +1,8 @@
 import type { CalendarEntry } from './types.js';
 
+/** Max days shown in one calendar row so day cells (and cards) stay wider. */
+export const CALENDAR_DAYS_PER_ROW = 5;
+
 export type CalendarDayLayout = {
   date: number;
   inMonth: boolean;
@@ -29,6 +32,7 @@ export type CalendarMonthLayoutOptions = {
   month: number | Date;
   entries: CalendarEntry[];
   weekStartsOn?: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+  daysPerRow?: number;
 };
 
 const startOfDay = (date: Date) =>
@@ -50,15 +54,23 @@ const endOfDay = (date: number) => addDays(date, 1) - 1;
 const toDate = (value: number | Date) =>
   value instanceof Date ? value : new Date(value);
 
+const countDaysInclusive = (from: number, to: number) => {
+  let count = 0;
+  for (let date = from; date <= to; date = addDays(date, 1)) {
+    count++;
+  }
+  return count;
+};
+
 export const getCalendarVisibleMonthRange = (
   month: number | Date,
-  weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 0
+  weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 0,
+  daysPerRow: number = CALENDAR_DAYS_PER_ROW
 ) => {
   const cursor = toDate(month);
   const monthStart = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
   const monthEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0);
   const startOffset = (monthStart.getDay() - weekStartsOn + 7) % 7;
-  const endOffset = (weekStartsOn + 6 - monthEnd.getDay() + 7) % 7;
   const from = startOfDay(
     new Date(
       monthStart.getFullYear(),
@@ -66,21 +78,16 @@ export const getCalendarVisibleMonthRange = (
       monthStart.getDate() - startOffset
     )
   );
-  const to = endOfDay(
-    startOfDay(
-      new Date(
-        monthEnd.getFullYear(),
-        monthEnd.getMonth(),
-        monthEnd.getDate() + endOffset
-      )
-    )
-  );
+  const monthEndDay = startOfDay(monthEnd);
+  const daysThroughMonthEnd = countDaysInclusive(from, monthEndDay);
+  const endPad = (daysPerRow - (daysThroughMonthEnd % daysPerRow)) % daysPerRow;
+  const to = endOfDay(addDays(monthEndDay, endPad));
 
   return {
     from,
     to,
     monthStart: startOfDay(monthStart),
-    monthEnd: endOfDay(startOfDay(monthEnd)),
+    monthEnd: endOfDay(monthEndDay),
   };
 };
 
@@ -113,7 +120,8 @@ const getDayOffset = (days: CalendarDayLayout[], date: number) =>
 
 const assignSegmentSlots = (
   weeks: CalendarDayLayout[][],
-  segments: CalendarRangeSegment[]
+  segments: CalendarRangeSegment[],
+  daysPerRow: number
 ) => {
   for (let weekIndex = 0; weekIndex < weeks.length; weekIndex++) {
     const weekSegments = segments.filter(
@@ -132,7 +140,10 @@ const assignSegmentSlots = (
       ) {
         slot++;
       }
-      const slotDays = (slots[slot] ??= Array.from({ length: 7 }, () => false));
+      const slotDays = (slots[slot] ??= Array.from(
+        { length: daysPerRow },
+        () => false
+      ));
       for (
         let index = segment.startIndex;
         index < segment.startIndex + segment.span;
@@ -171,8 +182,9 @@ export const createCalendarMonthLayout = ({
   month,
   entries,
   weekStartsOn = 0,
+  daysPerRow = CALENDAR_DAYS_PER_ROW,
 }: CalendarMonthLayoutOptions): CalendarMonthLayout => {
-  const range = getCalendarVisibleMonthRange(month, weekStartsOn);
+  const range = getCalendarVisibleMonthRange(month, weekStartsOn, daysPerRow);
   const cursor = toDate(month);
   const days: CalendarDayLayout[] = [];
   const dayByTime = new Map<number, CalendarDayLayout>();
@@ -218,9 +230,9 @@ export const createCalendarMonthLayout = ({
     }
     let offset = startOffset;
     while (offset <= endOffset) {
-      const weekIndex = Math.floor(offset / 7);
-      const startIndex = offset % 7;
-      const weekEndOffset = weekIndex * 7 + 6;
+      const weekIndex = Math.floor(offset / daysPerRow);
+      const startIndex = offset % daysPerRow;
+      const weekEndOffset = weekIndex * daysPerRow + (daysPerRow - 1);
       const span = Math.min(endOffset, weekEndOffset) - offset + 1;
       const segment = {
         entry,
@@ -228,7 +240,7 @@ export const createCalendarMonthLayout = ({
         startIndex,
         span,
         slot: 0,
-        startsBeforeWeek: startOffset < weekIndex * 7,
+        startsBeforeWeek: startOffset < weekIndex * daysPerRow,
         endsAfterWeek: endOffset > weekEndOffset,
       };
       segments.push(segment);
@@ -240,11 +252,11 @@ export const createCalendarMonthLayout = ({
   }
 
   const weeks: CalendarDayLayout[][] = [];
-  for (let index = 0; index < days.length; index += 7) {
-    weeks.push(days.slice(index, index + 7));
+  for (let index = 0; index < days.length; index += daysPerRow) {
+    weeks.push(days.slice(index, index + daysPerRow));
   }
 
-  assignSegmentSlots(weeks, segments);
+  assignSegmentSlots(weeks, segments, daysPerRow);
 
   return { from: range.from, to: range.to, weeks, days, segments };
 };

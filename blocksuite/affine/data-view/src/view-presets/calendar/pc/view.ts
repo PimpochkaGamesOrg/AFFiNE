@@ -30,6 +30,7 @@ import {
 import type { CalendarSingleView } from '../calendar-view-manager.js';
 import type { CalendarDayLayout, CalendarRangeSegment } from '../layout.js';
 import {
+  CALENDAR_DAYS_PER_ROW,
   createCalendarMonthLayout,
   getCalendarDayContentSlots,
   getCalendarDaySegmentSlots,
@@ -842,7 +843,7 @@ export class CalendarViewUI extends DataViewUIBase<CalendarViewUILogic> {
     if (!state || state.type === 'doc') return;
 
     const weekStart = week[0]?.date;
-    const weekEnd = week[6]?.date;
+    const weekEnd = week[CALENDAR_DAYS_PER_ROW - 1]?.date;
     if (weekStart === undefined || weekEnd === undefined) return;
     if (range.start > weekEnd || range.end < weekStart) return;
 
