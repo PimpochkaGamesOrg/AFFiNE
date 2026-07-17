@@ -253,6 +253,17 @@ export const calendarViewStyles = css`
     cursor: pointer;
   }
 
+  .calendar-entry.has-properties {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    height: auto;
+    padding: 6px;
+    white-space: normal;
+    overflow: hidden;
+    text-overflow: unset;
+  }
+
   .calendar-nav button:hover,
   .calendar-setup button:hover {
     background: var(--affine-hover-color);
@@ -294,6 +305,12 @@ export const calendarViewStyles = css`
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+    font-weight: 500;
+  }
+
+  .calendar-entry.has-properties .calendar-entry-title {
+    width: 100%;
+    white-space: nowrap;
   }
 
   .calendar-entry-title.is-empty {
@@ -334,9 +351,11 @@ export const calendarViewStyles = css`
   }
 
   .calendar-entry-properties {
-    display: inline-flex;
+    display: flex;
+    flex-direction: column;
     gap: 3px;
     min-width: 0;
+    width: 100%;
   }
 
   .calendar-entry-property {

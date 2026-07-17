@@ -722,14 +722,17 @@ export class CalendarViewUI extends DataViewUIBase<CalendarViewUILogic> {
     const canResize = entry.kind === 'row' && entry.canResizeRange;
     const showLeftHandle = canResize && segment && !segment.startsBeforeWeek;
     const showRightHandle = canResize && segment && !segment.endsAfterWeek;
+    const rowEntry =
+      !segment && entry.kind === 'row' && entry.cardProperties.length > 0
+        ? entry
+        : undefined;
 
     return html`
       <div
         ${ref(element => this.logic.bindEntryDraggable(dndKey, entry, element))}
-        class="calendar-entry ${entry.kind} ${segmentClass} ${this.logic
-          .selectedEntryId === entry.id
-          ? 'selected'
-          : ''}"
+        class="calendar-entry ${entry.kind} ${segmentClass} ${rowEntry
+          ? 'has-properties'
+          : ''} ${this.logic.selectedEntryId === entry.id ? 'selected' : ''}"
         role="button"
         tabindex="0"
         aria-label=${entry.title || 'Untitled'}
@@ -752,15 +755,19 @@ export class CalendarViewUI extends DataViewUIBase<CalendarViewUILogic> {
             ></span>`
           : nothing}
         ${this.renderEntryTitle(entry)}
-        ${entry.kind === 'row' && entry.cardProperties.length
-          ? html`<span class="calendar-entry-properties">
-              ${entry.cardProperties.map(
-                property =>
-                  html`<span class="calendar-entry-property"
-                    >${property.value}</span
-                  >`
+        ${rowEntry
+          ? html`<div class="calendar-entry-properties">
+              ${rowEntry.cardProperties.map(
+                property => html`
+                  <affine-data-view-calendar-card-property
+                    .rowId=${rowEntry.rowId}
+                    .column=${this.logic.view.propertyGetOrCreate(
+                      property.propertyId
+                    )}
+                  ></affine-data-view-calendar-card-property>
+                `
               )}
-            </span>`
+            </div>`
           : nothing}
         ${showRightHandle
           ? html`<span

@@ -1,6 +1,9 @@
 import { DocDisplayMetaProvider } from '@blocksuite/affine-shared/services';
 import type { AffineTextAttributes } from '@blocksuite/affine-shared/types';
-import type { InsertToPosition } from '@blocksuite/affine-shared/utils';
+import {
+  insertPositionToIndex,
+  type InsertToPosition,
+} from '@blocksuite/affine-shared/utils';
 import { type DeltaInsert, Text } from '@blocksuite/store';
 import { computed, type ReadonlySignal, signal } from '@preact/signals-core';
 import { Doc } from 'yjs';
@@ -169,12 +172,19 @@ export class CalendarSingleView extends SingleViewBase<CalendarStoredViewData> {
   private externalEntriesRequestId = 0;
 
   propertiesRaw$ = computed(() => {
-    return this.dataSource.properties$.value.map(id =>
-      this.propertyGetOrCreate(id)
-    );
+    const allIds = this.dataSource.properties$.value;
+    const visibleIds = getCardData(this.data$.value).visiblePropertyIds ?? [];
+    const visibleSet = new Set(visibleIds.filter(id => allIds.includes(id)));
+    const orderedIds = [
+      ...visibleIds.filter(id => visibleSet.has(id)),
+      ...allIds.filter(id => !visibleSet.has(id)),
+    ];
+    return orderedIds.map(id => this.propertyGetOrCreate(id));
   });
 
-  properties$ = this.propertiesRaw$;
+  properties$ = computed(() => {
+    return this.propertiesRaw$.value.filter(property => !property.hide$.value);
+  });
 
   detailProperties$ = computed(() => {
     return this.propertiesRaw$.value.filter(
@@ -276,14 +286,31 @@ export class CalendarSingleView extends SingleViewBase<CalendarStoredViewData> {
     };
   });
 
-  private readonly visibleCardProperties$ = computed(() => {
+  readonly visibleCardProperties$ = computed(() => {
     const card = getCardData(this.data$.value);
     const visiblePropertyIds = card.visiblePropertyIds ?? [];
-    const titleColumn = card.titleColumnId;
+    const titleColumn =
+      card.titleColumnId ??
+      this.propertiesRaw$.value.find(
+        property => property.type$.value === 'title'
+      )?.id;
     return visiblePropertyIds
-      .filter(propertyId => propertyId !== titleColumn)
+      .filter(
+        propertyId =>
+          propertyId !== titleColumn &&
+          this.dataSource.properties$.value.includes(propertyId)
+      )
       .map(propertyId => this.propertyGetOrCreate(propertyId));
   });
+
+  setCardVisiblePropertyIds(visiblePropertyIds: string[]) {
+    this.dataUpdate(data => ({
+      card: {
+        ...getCardData(data),
+        visiblePropertyIds,
+      },
+    }));
+  }
 
   rowEntries$ = computed<CalendarRowEntry[]>(() => {
     const mapping = this.dateMapping$.value;
@@ -584,15 +611,57 @@ export class CalendarSingleView extends SingleViewBase<CalendarStoredViewData> {
 }
 
 export class CalendarProperty extends PropertyBase {
-  hide$ = computed(() => false);
+  hide$ = computed(() => {
+    if (this.type$.value === 'title') {
+      return false;
+    }
+    const visiblePropertyIds =
+      getCardData(this.calendarView.data$.value).visiblePropertyIds ?? [];
+    return !visiblePropertyIds.includes(this.id);
+  });
 
-  constructor(view: CalendarSingleView, propertyId: string) {
-    super(view as SingleView, propertyId);
+  constructor(
+    readonly calendarView: CalendarSingleView,
+    propertyId: string
+  ) {
+    super(calendarView as SingleView, propertyId);
   }
 
-  hideSet(_hide: boolean): void {}
+  hideSet(hide: boolean): void {
+    if (!this.hideCanSet) {
+      return;
+    }
+    const card = getCardData(this.calendarView.data$.value);
+    const current = card.visiblePropertyIds ?? [];
+    const next = hide
+      ? current.filter(id => id !== this.id)
+      : current.includes(this.id)
+        ? current
+        : [...current, this.id];
+    this.calendarView.setCardVisiblePropertyIds(next);
+  }
 
-  move(_position: InsertToPosition): void {}
+  move(position: InsertToPosition): void {
+    const properties = this.calendarView.propertiesRaw$.value.map(
+      property => property.id
+    );
+    const fromIndex = properties.indexOf(this.id);
+    if (fromIndex < 0) {
+      return;
+    }
+    const [propertyId] = properties.splice(fromIndex, 1);
+    if (!propertyId) {
+      return;
+    }
+    const toIndex = insertPositionToIndex(position, properties);
+    properties.splice(toIndex, 0, propertyId);
+    const visibleSet = new Set(
+      getCardData(this.calendarView.data$.value).visiblePropertyIds ?? []
+    );
+    this.calendarView.setCardVisiblePropertyIds(
+      properties.filter(id => visibleSet.has(id))
+    );
+  }
 }
 
 export class CalendarRow extends RowBase {

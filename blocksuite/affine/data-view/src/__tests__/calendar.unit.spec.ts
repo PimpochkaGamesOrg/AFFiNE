@@ -401,6 +401,51 @@ describe('CalendarSingleView', () => {
     ]);
   });
 
+  it('toggles card property visibility from property hideSet', () => {
+    const { view } = createCalendarView({
+      startColumnId: 'date',
+      visiblePropertyIds: [],
+    });
+
+    expect(view.properties$.value.map(property => property.id)).toEqual([
+      'title',
+    ]);
+    expect(view.propertyGetOrCreate('status').hide$.value).toBe(true);
+
+    view.propertyGetOrCreate('status').hideSet(false);
+
+    expect(view.data$.value?.card.visiblePropertyIds).toEqual(['status']);
+    expect(view.propertyGetOrCreate('status').hide$.value).toBe(false);
+    expect(view.properties$.value.map(property => property.id)).toEqual([
+      'status',
+      'title',
+    ]);
+    expect(view.rowEntries$.value[0]?.cardProperties).toEqual([
+      {
+        propertyId: 'status',
+        value: 'Done',
+      },
+    ]);
+
+    view.propertyGetOrCreate('status').hideSet(true);
+
+    expect(view.data$.value?.card.visiblePropertyIds).toEqual([]);
+    expect(view.rowEntries$.value[0]?.cardProperties).toEqual([]);
+  });
+
+  it('keeps title property always visible in calendar properties settings', () => {
+    const { view } = createCalendarView({
+      startColumnId: 'date',
+      visiblePropertyIds: ['status'],
+    });
+    const title = view.propertyGetOrCreate('title');
+
+    expect(title.hideCanSet).toBe(false);
+    expect(title.hide$.value).toBe(false);
+    title.hideSet(true);
+    expect(title.hide$.value).toBe(false);
+  });
+
   it('parses single linked doc id from title cell', () => {
     const { view } = createCalendarView({
       startColumnId: 'date',
