@@ -36,16 +36,22 @@ export const calendarViewStyles = css`
     --calendar-external-fallback-color: #b45309;
   }
 
+  affine-data-view-calendar *,
+  affine-data-view-calendar *::before,
+  affine-data-view-calendar *::after {
+    box-sizing: border-box;
+  }
+
   .calendar-scroll {
-    width: 100%;
     overflow-x: auto;
     overflow-y: hidden;
   }
 
   .calendar-shell {
     position: relative;
+    width: 100%;
     min-width: 800px;
-    padding: 0 0 12px;
+    padding: 0 1px 12px 0;
   }
 
   .calendar-toolbar {
@@ -153,6 +159,7 @@ export const calendarViewStyles = css`
   }
 
   .calendar-grid {
+    width: 100%;
     border-top: 1px solid var(--calendar-grid-border-color);
     border-left: 1px solid var(--calendar-grid-border-color);
   }
@@ -160,6 +167,7 @@ export const calendarViewStyles = css`
   .calendar-day {
     position: relative;
     min-height: 168px;
+    min-width: 0;
     border-right: 1px solid var(--calendar-grid-border-color);
     border-bottom: 1px solid var(--calendar-grid-border-color);
     padding: 8px;

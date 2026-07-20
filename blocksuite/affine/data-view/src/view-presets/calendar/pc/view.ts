@@ -18,6 +18,7 @@ import {
 import { html, nothing, type TemplateResult } from 'lit';
 import { ref } from 'lit/directives/ref.js';
 import { repeat } from 'lit/directives/repeat.js';
+import { styleMap } from 'lit/directives/style-map.js';
 
 import {
   createUniComponentFromWebComponent,
@@ -1090,6 +1091,13 @@ export class CalendarViewUI extends DataViewUIBase<CalendarViewUILogic> {
 
   override render(): TemplateResult {
     const setup = this.logic.view.dateMapping$.value.status === 'setup';
+    // Expand into the page gutter a bit so the last day column isn't clipped.
+    const sidePad = this.logic.root.config.virtualPadding$.value + 16;
+    const scrollStyle = styleMap({
+      width: `calc(100% + ${sidePad * 2}px)`,
+      marginLeft: `-${sidePad}px`,
+      marginRight: `-${sidePad}px`,
+    });
     return html`
       ${this.logic.headerWidget
         ? renderUniLit(this.logic.headerWidget, {
@@ -1097,7 +1105,11 @@ export class CalendarViewUI extends DataViewUIBase<CalendarViewUILogic> {
           })
         : nothing}
       <div class=${setup ? 'calendar-setup-wrap' : ''}>
-        <div class="calendar-scroll" @wheel="${this.logic.onWheel}">
+        <div
+          class="calendar-scroll"
+          style="${scrollStyle}"
+          @wheel="${this.logic.onWheel}"
+        >
           ${this.renderCalendar(setup)}
         </div>
         ${setup
